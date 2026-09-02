@@ -1,7 +1,12 @@
 # Landing — Milagros Canestro
 
-Un solo archivo: `index.html`. Sin build, sin dependencias que instalar.
-Bilingüe (ES/EN), modo claro y oscuro, y contacto por email y WhatsApp.
+**Este repositorio es sólo lo publicado, no el código fuente.** Lo que hay
+acá lo genera Next.js desde `../site-next` y se copia con `npm run publish`.
+No se edita a mano: cualquier cambio hecho acá se pierde en la próxima
+publicación.
+
+El sitio es bilingüe (ES/EN), con modo claro y oscuro, y contacto por email y
+WhatsApp.
 
 ## Publicar en GitHub Pages
 
@@ -32,12 +37,22 @@ En un par de minutos queda en **https://migramoxx.github.io**
 
 ## Actualizarla
 
+Se toca el código en `../site-next`, se compila y se copia acá:
+
+```bash
+cd "C:\Users\milag\OneDrive\Escritorio\cv\site-next"
+npm run build && npm run publish
+```
+
 ```bash
 cd "C:\Users\milag\OneDrive\Escritorio\cv\site"
-git add index.html && git commit -m "Actualizo la landing" && git push
+git add -A && git commit -m "Actualizo la landing" && git push
 ```
 
 Los cambios aparecen en aproximadamente un minuto.
+
+El archivo `.nojekyll` tiene que quedar sí o sí: sin él, GitHub Pages ignora
+la carpeta `_next/` y la página sale sin estilos ni JavaScript.
 
 ## Qué conviene ir sumando
 
