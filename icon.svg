@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="274 197 466 466" width="466" height="466">
+  <style>
+    /* La pestaña del navegador tiene su propio tema y no hereda el del
+       sitio. Sin esto la campana es negra sobre negro y no se ve nada. */
+    .tinta { fill: #101312; stroke: #101312; }
+    @media (prefers-color-scheme: dark) {
+      .tinta { fill: #fbfbfa; stroke: #fbfbfa; }
+    }
+  </style>
+  <!-- Silueta llena, con los puntos de CAMPANA en geometria.ts: los mismos
+       hombros (420,318)/(594,318), los mismos flancos, los mismos pies y la
+       misma curva de boca. A 16px una línea fina desaparece; el relleno no. -->
+  <path class="tinta"
+        d="M478 258 L438 282 L420 318 L398 396 L370 494 L342 572 L312 592 L326 616
+           C420 646 590 646 686 616 L702 592 L672 572 L646 494 L618 396 L594 318
+           L572 280 L528 256 Z"/>
+  <!-- El asa, gruesa para que a tamaño chico lea como nudo y no como pelo. -->
+  <path class="tinta" fill="none" stroke-width="26" stroke-linecap="round"
+        d="M486 252 C472 230 484 208 502 210 C520 212 528 232 514 252"/>
+  <!-- El badajo, en la boca y no colgando: es el amarillo que en la pieza
+       viaja de punta a punta, y acá además no roba alto al cuadro. -->
+  <circle cx="506" cy="634" r="27" fill="#e8b13a"/>
+</svg>

@@ -1,0 +1,4 @@
+User-Agent: *
+Allow: /
+
+Sitemap: https://migramoxx.github.io/sitemap.xml
