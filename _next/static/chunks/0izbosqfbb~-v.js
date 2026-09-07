@@ -1,0 +1,13 @@
+(globalThis.TURBOPACK||(globalThis.TURBOPACK=[])).push(["object"==typeof document?document.currentScript:void 0,21033,e=>{"use strict";var t=e.i(43476),a=e.i(71645);let r=a.createContext(null),n=a.createContext(null),o=`
+(function(){
+  try {
+    var stored = localStorage.getItem("mc-theme");
+    var dark = stored ? stored === "dark"
+      : window.matchMedia("(prefers-color-scheme: dark)").matches;
+    if (dark) document.documentElement.classList.add("dark");
+    var lang = localStorage.getItem("mc-lang");
+    if (!lang) lang = (navigator.language || "es").toLowerCase().startsWith("en") ? "en" : "es";
+    document.documentElement.setAttribute("lang", lang);
+  } catch (e) {}
+})();
+`;e.s(["SiteProviders",0,function({children:e}){let[o,s]=a.useState("es"),[c,l]=a.useState("light"),[i,u]=a.useState(!1);a.useEffect(()=>{s(localStorage.getItem("mc-lang")||((navigator.language||"es").toLowerCase().startsWith("en")?"en":"es")),l(document.documentElement.classList.contains("dark")?"dark":"light"),u(!0)},[]);let d=a.useCallback(e=>{s(e),localStorage.setItem("mc-lang",e),document.documentElement.setAttribute("lang",e)},[]),m=a.useCallback(()=>{l(e=>{let t="dark"===e?"light":"dark";return document.documentElement.classList.toggle("dark","dark"===t),localStorage.setItem("mc-theme",t),t})},[]),g=a.useCallback(e=>e[o],[o]),h=a.useMemo(()=>({lang:o,setLang:d,t:g,ready:i}),[o,d,g,i]),f=a.useMemo(()=>({theme:c,toggleTheme:m,ready:i}),[c,m,i]);return(0,t.jsx)(r.Provider,{value:h,children:(0,t.jsx)(n.Provider,{value:f,children:e})})},"themeBootstrapScript",0,o,"useLang",0,function(){let e=a.useContext(r);if(!e)throw Error("useLang debe usarse dentro de <SiteProviders>");return e},"useTheme",0,function(){let e=a.useContext(n);if(!e)throw Error("useTheme debe usarse dentro de <SiteProviders>");return e}])},32485,e=>{"use strict";var t=e.i(71645);function a(e,t){try{let a=window;a.umami?.track(e,t)}catch{}}e.s(["AnaliticaEventos",0,function(){return t.useEffect(()=>{0;let e=e=>{let t=e.target;if(!(t instanceof Element))return;let r=t.closest("a");if(!r)return;let n=r.getAttribute("href")??"",o=r.closest("section")?.id||"sin-seccion";n.startsWith("mailto:")?a("contacto-email",{seccion:o}):n.includes("wa.me")?a("contacto-whatsapp",{seccion:o}):"#contacto"===n&&a("cta-contacto",{seccion:o})};return document.addEventListener("click",e,{capture:!0,passive:!0}),()=>document.removeEventListener("click",e,{capture:!0})},[]),null}],32485)}]);
