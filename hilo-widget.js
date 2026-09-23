@@ -38,6 +38,10 @@
   var ACCENT = script.getAttribute("data-accent") || "#1f6f54";
   var PLACEHOLDER = script.getAttribute("data-placeholder") || "Escribí tu consulta";
   var GREETING = script.getAttribute("data-greeting") || "";
+  // El default sigue siendo la burbuja genérica: esto no cambia lo que ya
+  // corre en el sitio de ningún cliente. Sólo Milagros la prende, a mano,
+  // en su propia etiqueta <script>.
+  var ICON = script.getAttribute("data-icon") || "";
   var STORAGE_KEY = "hilo.session";
 
   var POLL_OPEN_MS = 2500;
@@ -115,10 +119,12 @@
   launcher.type = "button";
   launcher.setAttribute("aria-label", "Abrir el chat");
   launcher.setAttribute("aria-expanded", "false");
-  launcher.innerHTML =
-    '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
-    ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
-    '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-4-.9L3 21l1.9-4.9A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>';
+  if (ICON !== "campana") {
+    launcher.innerHTML =
+      '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"' +
+      ' stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-4-.9L3 21l1.9-4.9A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>';
+  }
 
   var panel = document.createElement("div");
   panel.className = "hilo-panel";
@@ -140,6 +146,223 @@
 
   document.body.appendChild(launcher);
   document.body.appendChild(panel);
+
+  // ── ícono opcional: la mascota-campana en vez de la burbuja ──────────────
+  // Mismo dibujo y mismo motor que lab/mesa/anim/campana-mascota.html,
+  // portado sin dependencias porque este archivo es el que se le entrega a
+  // cada cliente tal cual. Sin círculo de fondo: el botón directamente ES
+  // la animación, así que el hitbox del <button> es la propia campana.
+  if (ICON === "campana") {
+    (function (launcher, panel) {
+      var TAU = Math.PI * 2;
+      var lim = function (v, a, b) { return v < a ? a : v > b ? b : v; };
+      var mez = function (a, b, t) { return a + (b - a) * t; };
+      var suavizar = function (t) { return t * t * (3 - 2 * t); };
+
+      var ANCHO = 64, ALTO = 116;   // proporción 338:614 del arte original
+
+      launcher.style.background = "none";
+      launcher.style.borderRadius = "0";
+      launcher.style.boxShadow = "none";
+      launcher.style.width = ANCHO + "px";
+      launcher.style.height = ALTO + "px";
+      launcher.style.filter = "drop-shadow(0 6px 16px rgba(0,0,0,.22))";
+      // El panel se apoya en la altura real del lanzador, no en el valor fijo
+      // de la burbuja: si el tamaño de la mascota cambia, esto se acomoda solo.
+      panel.style.bottom = (20 + ALTO + 14) + "px";
+
+      var NS = "http://www.w3.org/2000/svg";
+      function crear(tag, attrs, padre) {
+        var e = document.createElementNS(NS, tag);
+        for (var k in attrs) e.setAttribute(k, attrs[k]);
+        padre.appendChild(e);
+        return e;
+      }
+
+      launcher.innerHTML =
+        '<svg viewBox="338 187 338 614" width="' + ANCHO + '" height="' + ALTO + '"' +
+        ' preserveAspectRatio="xMidYMid meet" aria-hidden="true"' +
+        ' style="display:block;overflow:visible">' +
+        '<defs>' +
+        '<radialGradient id="hm-nucleo"><stop offset="0%" stop-color="#ffe89b"/>' +
+        '<stop offset="55%" stop-color="#f0b41c" stop-opacity=".97"/>' +
+        '<stop offset="100%" stop-color="#d69a0e" stop-opacity="0"/></radialGradient>' +
+        '<radialGradient id="hm-halo"><stop offset="0%" stop-color="#ffe89b" stop-opacity=".85"/>' +
+        '<stop offset="45%" stop-color="#f0b41c" stop-opacity=".28"/>' +
+        '<stop offset="100%" stop-color="#f0b41c" stop-opacity="0"/></radialGradient>' +
+        "</defs>" +
+        '<g id="hm-campana"></g><g id="hm-colgante"></g><g id="hm-ojos"></g>' +
+        "</svg>";
+
+      var svg = launcher.querySelector("svg");
+      var gCampana = svg.querySelector("#hm-campana");
+      var gColgante = svg.querySelector("#hm-colgante");
+      var gOjos = svg.querySelector("#hm-ojos");
+
+      // -- el sombrerito: el mismo contorno de components/campana --
+      var CAMPANA = [
+        { d: "M486 250 C474 232 484 210 502 212 C520 214 526 234 514 250", w: 9 },
+        { d: "M478 258 L438 282 L420 318", w: 12 },
+        { d: "M528 256 L572 280 L594 318", w: 12 },
+        { d: "M420 318 L398 396 L370 494 L342 572", w: 13 },
+        { d: "M594 318 L618 396 L646 494 L672 572", w: 13 },
+        { d: "M462 268 L444 366 L420 476", w: 5 },
+        { d: "M546 266 L570 364 L596 474", w: 5 },
+        { d: "M342 572 L312 592 L326 616", w: 12 },
+        { d: "M672 572 L702 592 L686 616", w: 12 },
+        { d: "M334 600 C424 628 586 628 678 600", w: 6 },
+        { d: "M326 616 C420 646 590 646 686 616", w: 12 }
+      ];
+      var PIVOTE = [500, 232], ESCALA_CAMPANA = 0.78;
+      var RIM_SIN_ESCALAR = [506, 638.5];
+      var RIM = [
+        PIVOTE[0] + ESCALA_CAMPANA * (RIM_SIN_ESCALAR[0] - PIVOTE[0]),
+        PIVOTE[1] + ESCALA_CAMPANA * (RIM_SIN_ESCALAR[1] - PIVOTE[1])
+      ];
+      gCampana.setAttribute("transform",
+        "translate(" + PIVOTE[0] + " " + PIVOTE[1] + ") scale(" + ESCALA_CAMPANA +
+        ") translate(" + (-PIVOTE[0]) + " " + (-PIVOTE[1]) + ")");
+      CAMPANA.forEach(function (t) {
+        crear("path", { d: t.d, fill: "none", stroke: "#1b1a17",
+          "stroke-linecap": "round", "stroke-linejoin": "round",
+          "stroke-width": t.w }, gCampana);
+      });
+
+      // -- los ojos: pupila chica y corrida, así se ve la medialuna sola --
+      var OJO_ESCALA = 0.85;
+      var OJO_RW = 42 * OJO_ESCALA, OJO_RP = 30 * OJO_ESCALA;
+      var OJOS_Y = RIM[1] + OJO_RW - 0.5;
+      var OJOS_X = [RIM[0] - 71, RIM[0] + 69];
+      var SESGO = [9 * OJO_ESCALA, 1 * OJO_ESCALA];
+      var MAX_OFF_X = 7 * OJO_ESCALA, MAX_OFF_Y = 4 * OJO_ESCALA;
+
+      var iris = OJOS_X.map(function (cx) {
+        crear("circle", { cx: cx, cy: OJOS_Y, r: OJO_RW, fill: "#fffdf6",
+          stroke: "#1b1a17", "stroke-width": 6 }, gOjos);
+        var g = crear("g", { transform:
+          "translate(" + (cx + SESGO[0]) + " " + (OJOS_Y + SESGO[1]) + ")" }, gOjos);
+        crear("circle", { r: OJO_RP, fill: "#1b1a17" }, g);
+        crear("ellipse", { cx: -2.5, cy: -12, rx: 8.5, ry: 6, fill: "#fff",
+          opacity: .92, transform: "rotate(-25 -2.5 -12)" }, g);
+        crear("ellipse", { cx: -15, cy: 13, rx: 5.5, ry: 4, fill: "#fff",
+          opacity: .85, transform: "rotate(18 -15 13)" }, g);
+        return { g: g, cx: cx };
+      });
+
+      [[OJOS_X[0] - 62, OJOS_Y - 14, .30], [OJOS_X[1] + 62, OJOS_Y - 14, .34],
+       [OJOS_X[0] - 30, OJOS_Y + 50, .22], [OJOS_X[1] + 30, OJOS_Y + 50, .24]]
+        .forEach(function (m) {
+          crear("circle", { cx: m[0], cy: m[1], r: 3.4, fill: "#1b1a17",
+            opacity: m[2] }, gOjos);
+        });
+
+      // -- el badajo, de nariz: nace en el labio, cordel ondulado de punta a punta --
+      var ANCLA = [RIM[0] + 0.3, RIM[1] - 2.5];
+      var BOLA = [RIM[0] - 2, RIM[1] + 169.5];
+      var halo = crear("circle", { cx: BOLA[0], cy: BOLA[1], r: 54,
+        fill: "url(#hm-halo)" }, gColgante);
+      crear("path", {
+        d: "M" + ANCLA[0].toFixed(1) + "," + ANCLA[1].toFixed(1) + " " +
+          "C489,562 521,576 505,590 C489,604 521,618 505,633 " +
+          "C489,648 521,662 505,676 C489,691 519,703 " +
+          BOLA[0].toFixed(1) + "," + BOLA[1].toFixed(1),
+        fill: "none", stroke: "#1b1a17", "stroke-linecap": "round",
+        "stroke-linejoin": "round", "stroke-width": 5.5
+      }, gColgante);
+      var nucleo = crear("circle", { cx: BOLA[0], cy: BOLA[1], r: 28,
+        fill: "url(#hm-nucleo)" }, gColgante);
+      function estrella(cx, cy, rE, rI) {
+        var pts = [];
+        for (var i = 0; i < 8; i++) {
+          var a = (i / 8) * TAU - Math.PI / 2, r = i % 2 === 0 ? rE : rI;
+          pts.push((cx + Math.cos(a) * r).toFixed(1) + "," +
+            (cy + Math.sin(a) * r).toFixed(1));
+        }
+        return "M" + pts.join("L") + "Z";
+      }
+      var chispa = crear("path", { d: estrella(BOLA[0] + 27, BOLA[1] - 24, 11, 4),
+        fill: "#fff8dd", opacity: 0 }, gColgante);
+
+      // -- mirada: el puntero si es mouse y se movió hace poco, si no, barrido propio --
+      var gx = 0, gy = 0, objX = 0, objY = 0, apuntando = false, ultimoMouse = -1e9;
+      function puntoEnPantalla(x, y) {
+        var pt = new DOMPoint(x, y);
+        var m = svg.getScreenCTM();
+        return m ? pt.matrixTransform(m) : { x: x, y: y };
+      }
+      window.addEventListener("pointermove", function (e) {
+        if (e.pointerType && e.pointerType !== "mouse") return;
+        var centro = puntoEnPantalla((OJOS_X[0] + OJOS_X[1]) / 2, OJOS_Y);
+        var dx = e.clientX - centro.x, dy = e.clientY - centro.y;
+        var d = Math.hypot(dx, dy) || 1;
+        var mag = Math.tanh(d / 220);
+        objX = (dx / d) * mag; objY = (dy / d) * mag * .5;
+        apuntando = true; ultimoMouse = performance.now();
+      }, { passive: true });
+
+      function miradaIdle(t) {
+        var T = 4.4;
+        return [Math.sin((t / T) * TAU), .16 * Math.sin((t / T) * TAU * 1.7 + 1.1)];
+      }
+
+      var RED = [];
+      for (var i = 0; i < 64; i++) RED.push(Math.random());
+      function ruido(x) {
+        var i0 = Math.floor(x), f = suavizar(x - i0);
+        return mez(RED[i0 & 63], RED[(i0 + 1) & 63], f);
+      }
+
+      var quieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+      function pintar(ms) {
+        var t = ms / 1000;
+        var tx, ty;
+        if (!quieto && apuntando && ms - ultimoMouse < 3500) { tx = objX; ty = objY; }
+        else {
+          var idle = quieto ? [0, 0] : miradaIdle(t);
+          tx = idle[0]; ty = idle[1]; apuntando = false;
+        }
+        var inercia = quieto ? 1 : .085;
+        gx += (tx - gx) * inercia; gy += (ty - gy) * inercia;
+        var dx = gx * MAX_OFF_X, dy = gy * MAX_OFF_Y;
+        iris.forEach(function (o) {
+          o.g.setAttribute("transform",
+            "translate(" + (o.cx + SESGO[0] + dx).toFixed(2) + " " +
+            (OJOS_Y + SESGO[1] + dy).toFixed(2) + ")");
+        });
+
+        var angulo = quieto ? 0 : Math.sin((t * TAU) / 2.6) * 3;
+        gColgante.setAttribute("transform",
+          "rotate(" + angulo.toFixed(3) + " " + ANCLA[0] + " " + ANCLA[1] + ")");
+
+        if (!quieto) {
+          var base = .82 + .14 * Math.sin((t * TAU) / 2.3);
+          var r = ruido(t * .5);
+          var guino = r > .88 ? (r - .88) / .12 : 0;
+          var luz = lim(base + guino * .5, 0, 1);
+          nucleo.setAttribute("opacity", luz.toFixed(3));
+          nucleo.setAttribute("transform", "scale(" + (1 + guino * .22).toFixed(3) + ")");
+          nucleo.setAttribute("transform-origin", BOLA[0] + "px " + BOLA[1] + "px");
+          halo.setAttribute("opacity", (.55 + guino * .45).toFixed(3));
+          chispa.setAttribute("opacity", (guino * .9).toFixed(3));
+        } else {
+          nucleo.setAttribute("opacity", .9);
+          halo.setAttribute("opacity", .5);
+        }
+        requestAnimationFrame(pintar);
+      }
+
+      // Fuera de pantalla no hace falta seguir pintando.
+      var visible = true;
+      new IntersectionObserver(function (es) { visible = es[0].isIntersecting; },
+        { rootMargin: "80px" }).observe(launcher);
+      var ultimo = -1;
+      (function lazo(ms) {
+        if (visible && ms !== ultimo) { ultimo = ms; pintar(ms); }
+        requestAnimationFrame(lazo);
+      })(0);
+    })(launcher, panel);
+  }
 
   var log = panel.querySelector(".hilo-log");
   var form = panel.querySelector(".hilo-form");
