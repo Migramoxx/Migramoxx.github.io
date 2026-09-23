@@ -44,6 +44,28 @@
   var ICON = script.getAttribute("data-icon") || "";
   var STORAGE_KEY = "hilo.session";
 
+  // El texto sobre el acento se elige solo por luminancia, no por una lista
+  // de casos: con el verde de siempre sigue dando blanco: con un acento claro
+  // (el ámbar de Milagros, o el que elija cualquier otro cliente) pasa a
+  // tinta oscura. Fórmula de luminancia relativa WCAG.
+  function textoLegibleSobre(hex) {
+    var m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex || "");
+    if (!m) return "#fff";
+    var canal = function (v) {
+      v = parseInt(v, 16) / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    };
+    var L = 0.2126 * canal(m[1]) + 0.7152 * canal(m[2]) + 0.0722 * canal(m[3]);
+    return L > 0.44 ? "#1b1a17" : "#fff";
+  }
+  var ACCENT_FG = textoLegibleSobre(ACCENT);
+
+  // Cuánto tarda la tarjeta en formarse cuando se abre: lo comparten el CSS
+  // (la revelación del contenido sólido) y el canvas (la convergencia de las
+  // partículas), para que sean la misma animación y no dos que coinciden por
+  // casualidad.
+  var DUR_OPEN = 460;
+
   var POLL_OPEN_MS = 2500;
   var POLL_AFTER_SEND_MS = 700;
   var POLL_AFTER_SEND_TRIES = 12;
@@ -58,7 +80,8 @@
   var css = `
   .hilo-launcher{position:fixed;right:20px;bottom:20px;z-index:2147483000;
     width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;
-    background:var(--hilo-accent);color:#fff;box-shadow:0 6px 24px rgba(0,0,0,.22);
+    background:var(--hilo-accent);color:var(--hilo-accent-fg);
+    box-shadow:0 6px 24px rgba(0,0,0,.22);
     display:grid;place-items:center;transition:transform .15s ease}
   .hilo-launcher:hover{transform:translateY(-2px)}
   .hilo-launcher:focus-visible{outline:3px solid var(--hilo-accent);outline-offset:3px}
@@ -69,18 +92,28 @@
     border:1px solid var(--hilo-line);border-radius:14px;
     box-shadow:0 18px 50px rgba(0,0,0,.24);
     font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  .hilo-panel[data-open="true"]{display:flex}
+  .hilo-panel[data-open="true"]{display:flex;
+    animation:hilo-materializar ${DUR_OPEN}ms ease-out both}
+  .hilo-panel[data-open="true"] .hilo-panel-cont{
+    animation:hilo-materializar-contenido ${DUR_OPEN}ms ease-out both}
+  @keyframes hilo-materializar{0%{opacity:0}100%{opacity:1}}
+  @keyframes hilo-materializar-contenido{0%,60%{opacity:0}100%{opacity:1}}
+  .hilo-panel-c{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .hilo-panel-cont{display:flex;flex-direction:column;min-height:0;flex:1}
   .hilo-head{display:flex;align-items:center;justify-content:space-between;gap:8px;
-    padding:12px 14px;background:var(--hilo-accent);color:#fff;font-weight:600}
-  .hilo-close{background:none;border:0;color:#fff;font-size:22px;line-height:1;
-    cursor:pointer;padding:2px 6px;border-radius:6px}
-  .hilo-close:focus-visible{outline:2px solid #fff;outline-offset:1px}
-  .hilo-log{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px}
+    padding:12px 14px;background:var(--hilo-accent);color:var(--hilo-accent-fg);
+    font-weight:600}
+  .hilo-close{background:none;border:0;color:var(--hilo-accent-fg);font-size:22px;
+    line-height:1;cursor:pointer;padding:2px 6px;border-radius:6px}
+  .hilo-close:focus-visible{outline:2px solid var(--hilo-accent-fg);outline-offset:1px}
+  .hilo-log{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;
+    position:relative}
+  .hilo-log-c{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   .hilo-msg{max-width:82%;padding:9px 12px;border-radius:13px;white-space:pre-wrap;
-    overflow-wrap:anywhere}
-  .hilo-msg[data-from="user"]{align-self:flex-end;background:var(--hilo-accent);color:#fff;
+    overflow-wrap:anywhere;background:#fff;border:0}
+  .hilo-msg[data-from="user"]{align-self:flex-end;color:var(--hilo-fg);
     border-bottom-right-radius:4px}
-  .hilo-msg[data-from="agent"]{align-self:flex-start;background:var(--hilo-bubble);
+  .hilo-msg[data-from="agent"]{align-self:flex-start;color:var(--hilo-fg);
     border-bottom-left-radius:4px}
   .hilo-msg[data-from="system"]{align-self:center;font-size:13px;color:var(--hilo-muted);
     background:none;text-align:center}
@@ -95,17 +128,23 @@
   .hilo-input{flex:1;padding:10px 12px;border:1px solid var(--hilo-line);border-radius:9px;
     background:var(--hilo-bg);color:var(--hilo-fg);font:inherit;min-width:0}
   .hilo-input:focus-visible{outline:2px solid var(--hilo-accent);outline-offset:-1px}
-  .hilo-send{padding:0 15px;border:0;border-radius:9px;background:var(--hilo-accent);
-    color:#fff;font:inherit;font-weight:600;cursor:pointer}
+  .hilo-send{padding:0 15px;border:0;border-radius:9px;background:#fff;
+    color:var(--hilo-fg);font:inherit;font-weight:600;cursor:pointer;
+    position:relative;overflow:visible}
+  .hilo-send-c{position:absolute;inset:-6px;width:calc(100% + 12px);
+    height:calc(100% + 12px);pointer-events:none}
   .hilo-send:disabled{opacity:.5;cursor:default}
   .hilo-send:focus-visible{outline:3px solid var(--hilo-accent);outline-offset:2px}
-  :root{--hilo-accent:${ACCENT};--hilo-bg:#fff;--hilo-fg:#16181d;--hilo-line:#e3e5ea;
-    --hilo-bubble:#f1f3f6;--hilo-muted:#6b7280}
+  :root{--hilo-accent:${ACCENT};--hilo-accent-fg:${ACCENT_FG};--hilo-bg:#fff;
+    --hilo-fg:#16181d;--hilo-line:#e3e5ea;--hilo-bubble:#f1f3f6;--hilo-muted:#6b7280}
   @media (prefers-color-scheme:dark){
     :root{--hilo-bg:#16181d;--hilo-fg:#f2f3f5;--hilo-line:#2c3039;--hilo-bubble:#23262e;
-      --hilo-muted:#9aa1ad}}
+      --hilo-muted:#9aa1ad}
+    .hilo-msg[data-from="user"],.hilo-msg[data-from="agent"],.hilo-send{
+      background:#20232b;color:var(--hilo-fg)}}
   @media (prefers-reduced-motion:reduce){
-    .hilo-launcher{transition:none}.hilo-typing i{animation:none;opacity:.5}}
+    .hilo-launcher{transition:none}.hilo-typing i{animation:none;opacity:.5}
+    .hilo-panel[data-open="true"]{animation:none}}
   `;
 
   var style = document.createElement("style");
@@ -132,6 +171,7 @@
   panel.setAttribute("role", "dialog");
   panel.setAttribute("aria-label", TITLE);
   panel.innerHTML =
+    '<div class="hilo-panel-cont">' +
     '<div class="hilo-head"><span></span>' +
     '<button class="hilo-close" type="button" aria-label="Cerrar el chat">&times;</button></div>' +
     '<div class="hilo-log" role="log" aria-live="polite" aria-atomic="false"></div>' +
@@ -139,7 +179,7 @@
     '<label class="hilo-sr" for="hilo-input" hidden>Mensaje</label>' +
     '<input class="hilo-input" id="hilo-input" autocomplete="off" />' +
     '<button class="hilo-send" type="submit">Enviar</button>' +
-    "</form>";
+    "</form></div>";
 
   panel.querySelector(".hilo-head span").textContent = TITLE;
   panel.querySelector(".hilo-input").placeholder = PLACEHOLDER;
@@ -369,6 +409,252 @@
   var input = panel.querySelector(".hilo-input");
   var sendButton = panel.querySelector(".hilo-send");
 
+  // ── contorno de partículas: Enviar + burbujas ─────────────────────────────
+  // Reemplaza el relleno de color por fondo blanco con un borde dibujado por
+  // partículas quietas en reposo, que se apartan cuando el mouse pasa cerca y
+  // vuelven solas (resorte amortiguado). Mismo espíritu que el polvo del hub
+  // (components/ui/hub-polvo.tsx) -amplitud por partícula que varía poco, para
+  // que se lea como una nube y no como ruido-, pero de cero: aquél traza
+  // órbitas alrededor de un círculo, esto traza el perímetro de un rectángulo
+  // redondeado, y ese perímetro no existe en ningún lado del código de ella.
+  var contorno = (function () {
+    var TAU = Math.PI * 2;
+    var cl = function (x, a, b) { return x < a ? a : x > b ? b : x; };
+    // Las dos curvas del motor real (particulas-transmutacion.tsx): sm es la
+    // meseta suave para las mezclas de opacidad, e3 es el acomodado -entra
+    // rápido, se asienta despacio- para todo lo que converge en el lugar.
+    var sm = function (a, b, x) { var t = cl((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+    var e3 = function (x) { return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
+    var reducido = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var MUTED = getComputedStyle(document.documentElement)
+      .getPropertyValue("--hilo-muted").trim() || "#8a8f99";
+
+    var mx = -9999, my = -9999, apuntando = false;
+    window.addEventListener("pointermove", function (e) {
+      if (e.pointerType && e.pointerType !== "mouse") return;
+      mx = e.clientX; my = e.clientY; apuntando = true;
+    }, { passive: true });
+
+    // Camina el contorno de un rectángulo con radio propio por esquina (las
+    // burbujas tienen una esquina casi recta, la "cola"), y devuelve n puntos
+    // parejos en fracción 0..1 de w/h -así, si el elemento cambia de tamaño,
+    // el punto sigue estando "en el mismo lugar" del contorno sin recalcular-.
+    function perimetro(w, h, rTL, rTR, rBR, rBL, n) {
+      var tramos = [
+        { len: Math.max(0, w - rTL - rTR),
+          fn: function (t) { return [rTL + t * (w - rTL - rTR), 0]; } },
+        { len: (Math.PI / 2) * rTR,
+          fn: function (t) { var a = -Math.PI / 2 + t * (Math.PI / 2);
+            return [w - rTR + Math.cos(a) * rTR, rTR + Math.sin(a) * rTR]; } },
+        { len: Math.max(0, h - rTR - rBR),
+          fn: function (t) { return [w, rTR + t * (h - rTR - rBR)]; } },
+        { len: (Math.PI / 2) * rBR,
+          fn: function (t) { var a = t * (Math.PI / 2);
+            return [w - rBR + Math.cos(a) * rBR, h - rBR + Math.sin(a) * rBR]; } },
+        { len: Math.max(0, w - rBR - rBL),
+          fn: function (t) { return [w - rBR - t * (w - rBR - rBL), h]; } },
+        { len: (Math.PI / 2) * rBL,
+          fn: function (t) { var a = Math.PI / 2 + t * (Math.PI / 2);
+            return [rBL + Math.cos(a) * rBL, h - rBL + Math.sin(a) * rBL]; } },
+        { len: Math.max(0, h - rBL - rTL),
+          fn: function (t) { return [0, h - rBL - t * (h - rBL - rTL)]; } },
+        { len: (Math.PI / 2) * rTL,
+          fn: function (t) { var a = Math.PI + t * (Math.PI / 2);
+            return [rTL + Math.cos(a) * rTL, rTL + Math.sin(a) * rTL]; } }
+      ];
+      var total = tramos.reduce(function (s, tr) { return s + tr.len; }, 0) || 1;
+      var pts = [];
+      for (var i = 0; i < n; i++) {
+        var s = (i / n) * total, acc = 0, k, p;
+        for (k = 0; k < tramos.length; k++) {
+          if (s <= acc + tramos[k].len || k === tramos.length - 1) {
+            var t = tramos[k].len > 0 ? (s - acc) / tramos[k].len : 0;
+            p = tramos[k].fn(Math.max(0, Math.min(1, t)));
+            break;
+          }
+          acc += tramos[k].len;
+        }
+        pts.push([p[0] / w, p[1] / h]);
+      }
+      return pts;
+    }
+
+    var datosPorElemento = new WeakMap();
+    function datosDe(el) {
+      var d = datosPorElemento.get(el);
+      if (d) return d;
+      var rect = el.getBoundingClientRect();
+      var w = rect.width || 1, h = rect.height || 1;
+      var est = getComputedStyle(el);
+      var rTL = parseFloat(est.borderTopLeftRadius) || 0;
+      var rTR = parseFloat(est.borderTopRightRadius) || 0;
+      var rBR = parseFloat(est.borderBottomRightRadius) || 0;
+      var rBL = parseFloat(est.borderBottomLeftRadius) || 0;
+      var n = Math.max(14, Math.min(40, Math.round((w + h) / 9)));
+      var pts = perimetro(w, h, rTL, rTR, rBR, rBL, n);
+      d = {
+        pts: pts,
+        ox: pts.map(function () { return 0; }),
+        oy: pts.map(function () { return 0; }),
+        vx: pts.map(function () { return 0; }),
+        vy: pts.map(function () { return 0; }),
+        fase: pts.map(function () { return Math.random() * TAU; }),
+        amp: pts.map(function () { return 0.88 + Math.random() * 0.24; })
+      };
+      datosPorElemento.set(el, d);
+      return d;
+    }
+
+    // Un canvas por zona (el log entero, el botón), no uno por burbuja.
+    function crearCanvas(contenedor, clase) {
+      var c = document.createElement("canvas");
+      c.className = clase;
+      contenedor.appendChild(c);
+      return c;
+    }
+    function ajustar(c) {
+      var rect = c.getBoundingClientRect();
+      var dpr = window.devicePixelRatio || 1;
+      var w = Math.max(1, Math.round(rect.width * dpr));
+      var h = Math.max(1, Math.round(rect.height * dpr));
+      if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
+      var ctx = c.getContext("2d");
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      return ctx;
+    }
+
+    function pintarItems(ctx, canvasRect, items, t) {
+      items.forEach(function (item) {
+        var rect = item.el.getBoundingClientRect();
+        if (rect.width < 1) return;
+        if (rect.bottom < canvasRect.top - 30 || rect.top > canvasRect.bottom + 30) return;
+        var d = datosDe(item.el);
+        ctx.fillStyle = item.tono === "accent" ? ACCENT : MUTED;
+        for (var i = 0; i < d.pts.length; i++) {
+          var px0 = rect.left - canvasRect.left + d.pts[i][0] * rect.width;
+          var py0 = rect.top - canvasRect.top + d.pts[i][1] * rect.height;
+          var px = px0, py = py0;
+          if (!reducido) {
+            if (apuntando) {
+              var dx = px0 + d.ox[i] - (mx - canvasRect.left);
+              var dy = py0 + d.oy[i] - (my - canvasRect.top);
+              var dist = Math.hypot(dx, dy), alcance = 24;
+              if (dist < alcance) {
+                var fuerza = (1 - dist / alcance) * 2.6;
+                d.vx[i] += (dx / (dist || 1)) * fuerza;
+                d.vy[i] += (dy / (dist || 1)) * fuerza;
+              }
+            }
+            d.vx[i] += -d.ox[i] * 0.05; d.vy[i] += -d.oy[i] * 0.05;
+            d.vx[i] *= 0.86; d.vy[i] *= 0.86;
+            d.ox[i] += d.vx[i]; d.oy[i] += d.vy[i];
+            var j = Math.sin(t * 1.6 + d.fase[i]) * 0.45 * d.amp[i];
+            var jn = Math.cos(t * 1.3 + d.fase[i] * 1.7) * 0.45 * d.amp[i];
+            px = px0 + d.ox[i] + j; py = py0 + d.oy[i] + jn;
+          }
+          ctx.globalAlpha = 0.55;
+          ctx.beginPath();
+          ctx.arc(px, py, 1.1, 0, TAU);
+          ctx.fill();
+        }
+      });
+    }
+
+    var canvasLog = crearCanvas(log, "hilo-log-c");
+    var canvasEnviar = crearCanvas(sendButton, "hilo-send-c");
+    var canvasPanel = crearCanvas(panel, "hilo-panel-c");
+    var burbujas = []; // {el, tono}
+
+    function registrarBurbuja(el, from) {
+      burbujas.push({ el: el, tono: from === "user" ? "accent" : "muted" });
+    }
+
+    // ── la tarjeta se arma con la misma nube: no es una animación CSS aparte
+    // que coincide en el tiempo, es el mismo dibujo. Reusa perimetro() sobre
+    // el panel entero (nada de assets ni curl 3D -eso vive en
+    // particulas-transmutacion.tsx y necesita los .bin que este archivo no
+    // puede cargar-, pero sí el mismo lenguaje: cada partícula arranca lejos
+    // de su lugar, en una dirección al azar propia -no todas parejo hacia
+    // afuera, que se leería como un aro creciendo y no como polvo
+    // asentándose- y converge con la curva e3, la misma que usa el motor
+    // real para todo lo que tiene que "acomodarse" en el lugar. -----------
+    var apertura = null; // { t0, pts, desde, w, h, r } mientras arma; null en reposo
+    function armar() {
+      if (reducido) { apertura = null; return; }
+      var rect = panel.getBoundingClientRect();
+      var w = rect.width, h = rect.height;
+      if (w < 1 || h < 1) { apertura = null; return; }
+      var r = parseFloat(getComputedStyle(panel).borderRadius) || 14;
+      var n = Math.max(70, Math.min(170, Math.round((w + h) / 6)));
+      var pts = perimetro(w, h, r, r, r, r, n);
+      var desde = pts.map(function () {
+        var a = Math.random() * TAU, d = 42 + Math.random() * 64;
+        return [Math.cos(a) * d, Math.sin(a) * d];
+      });
+      apertura = { t0: performance.now(), pts: pts, desde: desde, w: w, h: h };
+    }
+    function pintarApertura(ms) {
+      var ctx = ajustar(canvasPanel);
+      if (!apertura) { ctx.clearRect(0, 0, canvasPanel.width, canvasPanel.height); return; }
+      var u = cl((ms - apertura.t0) / DUR_OPEN, 0, 1);
+      var e = e3(u);
+      // el giro se deshace a la par que la nube converge -es lo que pidió
+      // ella, "un giro y expansión"-, y se acomoda a cero justo cuando la
+      // tarjeta sólida ya está encima (ver hilo-materializar-contenido).
+      var giro = -0.16 * (1 - e);
+      var op = sm(0, 0.1, u) * (1 - sm(0.62, 1, u));
+      ctx.clearRect(0, 0, apertura.w, apertura.h);
+      if (op > 0.002) {
+        ctx.save();
+        ctx.translate(apertura.w / 2, apertura.h / 2);
+        ctx.rotate(giro);
+        ctx.translate(-apertura.w / 2, -apertura.h / 2);
+        ctx.fillStyle = ACCENT;
+        ctx.globalAlpha = op * 0.8;
+        for (var i = 0; i < apertura.pts.length; i++) {
+          var tx = apertura.pts[i][0] * apertura.w, ty = apertura.pts[i][1] * apertura.h;
+          var px = tx + apertura.desde[i][0] * (1 - e);
+          var py = ty + apertura.desde[i][1] * (1 - e);
+          ctx.beginPath();
+          ctx.arc(px, py, 1.3, 0, TAU);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      if (u >= 1) apertura = null;
+    }
+
+    var corriendo = false, cuadro = null;
+    function frame(ms) {
+      if (!corriendo) return;
+      var t = ms / 1000;
+      var ctxLog = ajustar(canvasLog);
+      var rectLog = canvasLog.getBoundingClientRect();
+      ctxLog.clearRect(0, 0, rectLog.width, rectLog.height);
+      pintarItems(ctxLog, rectLog, burbujas, t);
+
+      var ctxEnviar = ajustar(canvasEnviar);
+      var rectEnviar = canvasEnviar.getBoundingClientRect();
+      ctxEnviar.clearRect(0, 0, rectEnviar.width, rectEnviar.height);
+      pintarItems(ctxEnviar, rectEnviar, [{ el: sendButton, tono: "accent" }], t);
+
+      pintarApertura(ms);
+
+      cuadro = requestAnimationFrame(frame);
+    }
+    function iniciar() {
+      if (corriendo) return;
+      corriendo = true;
+      cuadro = requestAnimationFrame(frame);
+    }
+    function detener() {
+      corriendo = false;
+      if (cuadro) cancelAnimationFrame(cuadro);
+    }
+
+    return { registrarBurbuja: registrarBurbuja, iniciar: iniciar, detener: detener, armar: armar };
+  })();
+
   // ── conversation ────────────────────────────────────────────────────────
 
   var session = null;
@@ -381,7 +667,11 @@
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body || {}),
     }).then(function (response) {
-      if (!response.ok) throw new Error("HTTP " + response.status);
+      if (!response.ok) {
+        var error = new Error("HTTP " + response.status);
+        error.status = response.status;
+        throw error;
+      }
       // The webhook answers the bare "ok" every webhook answers — it speaks
       // the same protocol as Meta and Twilio, not a private one for us. Only
       // the session and poll routes return JSON, so a missing body is normal
@@ -403,6 +693,7 @@
     node.textContent = text;
     log.appendChild(node);
     log.scrollTop = log.scrollHeight;
+    if (from !== "system") contorno.registrarBurbuja(node, from);
     return node;
   }
 
@@ -447,6 +738,19 @@
       }
       return session;
     });
+  }
+
+  // A session stored from a previous visit can outlive its server-side TTL
+  // (24h) or survive a redeploy that reset it. That was showing up as "No
+  // pudimos enviar el mensaje" for a visitor whose tab had simply been open
+  // a while — indistinguishable, from the panel, from the server being down.
+  function forgetSession() {
+    session = null;
+    try {
+      sessionStorage.removeItem(STORAGE_KEY);
+    } catch (error) {
+      /* nothing to do */
+    }
   }
 
   function collect() {
@@ -496,6 +800,8 @@
     panel.setAttribute("data-open", "true");
     launcher.setAttribute("aria-expanded", "true");
     launcher.setAttribute("aria-label", "Cerrar el chat");
+    contorno.armar();
+    contorno.iniciar();
 
     ensureSession()
       .then(function () {
@@ -513,6 +819,7 @@
     launcher.setAttribute("aria-expanded", "false");
     launcher.setAttribute("aria-label", "Abrir el chat");
     stopPolling();
+    contorno.detener();
     launcher.focus();
   }
 
@@ -537,20 +844,32 @@
     bubble("user", text);
     showTyping();
 
-    ensureSession()
+    sendMessage(text, true).finally(function () {
+      sendButton.disabled = false;
+      input.focus();
+    });
+  });
+
+  // retryOnRejectedSession: a 403 here almost always means the session id
+  // this tab had (from sessionStorage, or the one already in memory) is one
+  // the server no longer recognizes — expired or lost to a redeploy — not
+  // that sending is broken. Forgetting it and minting a fresh one fixes that
+  // silently; any other failure still surfaces the "no pudimos enviar" note.
+  function sendMessage(text, retryOnRejectedSession) {
+    return ensureSession()
       .then(function () {
         return post("/webhook/web", { session_id: session, text: text });
       })
       .then(function () {
         pollBurst(POLL_AFTER_SEND_TRIES);
       })
-      .catch(function () {
+      .catch(function (error) {
+        if (retryOnRejectedSession && error && error.status === 403) {
+          forgetSession();
+          return sendMessage(text, false);
+        }
         hideTyping();
         bubble("system", "No pudimos enviar el mensaje. Probá de nuevo.");
-      })
-      .finally(function () {
-        sendButton.disabled = false;
-        input.focus();
       });
-  });
+  }
 })();
