@@ -1,12 +1,14 @@
 :HL["/_next/static/chunks/0__qpxp.vb~86.css","style"]
-:HL["/_next/static/chunks/117n1i642doo9.css","style"]
+:HL["/_next/static/chunks/14jrzlbntqo4w.css","style"]
 :HL["/_next/static/media/03fc1b4a8d284b5e-s.p.09.f.n_ccld80.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/_next/static/media/0e64cfb82a47c250-s.p.0ifiqyzdok2k..woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/_next/static/media/374bfedbce52fcde-s.p.0iml90u_clsy3.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/_next/static/media/522cd826f2dc0be6-s.p.0n2990xzhyidg.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/_next/static/media/713e82fa9fe87496-s.p.08fj0~_8shb3u.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
+:HL["/_next/static/media/83afe278b6a6bb3c-s.p.0q-301v4kxxnr.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/_next/static/media/99e609270109b47d-s.p.16-z~2sp29ex6.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/_next/static/media/b02a479d288d97d4-s.p.06_fqbhf6hhmd.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/_next/static/media/ef7be03ed7e60a63-s.p.14o~5h-2n.9~4.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/_next/static/media/effe91970fc4db64-s.p.07ig5l8azj~hy.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
-0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"servicios","param":null,"prefetchHints":0,"slots":{"children":{"name":"diagnostico","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"8DLbkJ-ZoDZkmnnECSw5T"}
+:HL["/_next/static/chunks/03b3l9u-.vs9v.css","style"]
+0:{"tree":{"name":"","param":null,"prefetchHints":16,"slots":{"children":{"name":"servicios","param":null,"prefetchHints":0,"slots":{"children":{"name":"diagnostico","param":null,"prefetchHints":0,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":0,"slots":null}}}}}}},"staleTime":300,"buildId":"qmMgw8tjfbtPWf-Cs8wwS"}
