@@ -97,7 +97,7 @@
   .hilo-panel[data-open="true"] .hilo-panel-cont{
     animation:hilo-materializar-contenido ${DUR_OPEN}ms ease-out both}
   @keyframes hilo-materializar{0%{opacity:0}100%{opacity:1}}
-  @keyframes hilo-materializar-contenido{0%,60%{opacity:0}100%{opacity:1}}
+  @keyframes hilo-materializar-contenido{0%,35%{opacity:0}92%{opacity:1}}
   .hilo-panel-c{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   .hilo-panel-cont{display:flex;flex-direction:column;min-height:0;flex:1}
   .hilo-head{display:flex;align-items:center;justify-content:space-between;gap:8px;
@@ -569,59 +569,172 @@
       burbujas.push({ el: el, tono: from === "user" ? "accent" : "muted" });
     }
 
-    // ── la tarjeta se arma con la misma nube: no es una animación CSS aparte
-    // que coincide en el tiempo, es el mismo dibujo. Reusa perimetro() sobre
-    // el panel entero (nada de assets ni curl 3D -eso vive en
-    // particulas-transmutacion.tsx y necesita los .bin que este archivo no
-    // puede cargar-, pero sí el mismo lenguaje: cada partícula arranca lejos
-    // de su lugar, en una dirección al azar propia -no todas parejo hacia
-    // afuera, que se leería como un aro creciendo y no como polvo
-    // asentándose- y converge con la curva e3, la misma que usa el motor
-    // real para todo lo que tiene que "acomodarse" en el lugar. -----------
-    var apertura = null; // { t0, pts, desde, w, h, r } mientras arma; null en reposo
+    // ── la tarjeta se arma con el MISMO motor que particulas-transmutacion.tsx
+    // (la pieza de /servicios/landing), no una imitación en ctx.arc(): cada
+    // partícula es un píxel crudo escrito a mano en un ImageData fuera de
+    // pantalla, sumado -no pintado- sobre los vecinos, con el mismo motion
+    // blur por sub-pasos y el mismo lienzo que nunca se limpia del todo (una
+    // estela oscura se pinta encima cada cuadro). Es lo único que hace que
+    // miles de partículas salgan gratis y que la nube lea como polvo denso y
+    // no como puntos sueltos. Lo que SÍ es nuevo -no existe en la pieza
+    // real, que siempre viaja de una silueta a la otra- es que acá las
+    // partículas nacen en la campana y viajan en espiral hasta rellenar la
+    // silueta del panel: un campo de velocidad propio sobre la misma técnica
+    // de pintado.
+    function relleno(w, h, r, n) {
+      var cols = Math.max(1, Math.ceil(Math.sqrt(n * (w / h))));
+      var rows = Math.max(1, Math.ceil(n / cols));
+      var cw = w / cols, ch = h / rows, pts = [];
+      for (var j = 0; j < rows; j++) {
+        for (var i = 0; i < cols; i++) {
+          var x = (i + 0.5) * cw + (Math.random() - 0.5) * cw * 0.9;
+          var y = (j + 0.5) * ch + (Math.random() - 0.5) * ch * 0.9;
+          var qx = Math.max(Math.abs(x - w / 2) - (w / 2 - r), 0);
+          var qy = Math.max(Math.abs(y - h / 2) - (h / 2 - r), 0);
+          if (qx * qx + qy * qy <= r * r) pts.push([x, y]);
+        }
+      }
+      return pts;
+    }
+    function mez(a, b, t) { return a + (b - a) * t; }
+    function hexRGB(hex) {
+      var m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex || "");
+      return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [240, 180, 28];
+    }
+
+    var apertura = null; // datos de la nube mientras arma; null en reposo
     function armar() {
       if (reducido) { apertura = null; return; }
-      var rect = panel.getBoundingClientRect();
-      var w = rect.width, h = rect.height;
-      if (w < 1 || h < 1) { apertura = null; return; }
-      var r = parseFloat(getComputedStyle(panel).borderRadius) || 14;
-      var n = Math.max(70, Math.min(170, Math.round((w + h) / 6)));
-      var pts = perimetro(w, h, r, r, r, r, n);
-      var desde = pts.map(function () {
-        var a = Math.random() * TAU, d = 42 + Math.random() * 64;
-        return [Math.cos(a) * d, Math.sin(a) * d];
-      });
-      apertura = { t0: performance.now(), pts: pts, desde: desde, w: w, h: h };
-    }
-    function pintarApertura(ms) {
-      var ctx = ajustar(canvasPanel);
-      if (!apertura) { ctx.clearRect(0, 0, canvasPanel.width, canvasPanel.height); return; }
-      var u = cl((ms - apertura.t0) / DUR_OPEN, 0, 1);
-      var e = e3(u);
-      // el giro se deshace a la par que la nube converge -es lo que pidió
-      // ella, "un giro y expansión"-, y se acomoda a cero justo cuando la
-      // tarjeta sólida ya está encima (ver hilo-materializar-contenido).
-      var giro = -0.16 * (1 - e);
-      var op = sm(0, 0.1, u) * (1 - sm(0.62, 1, u));
-      ctx.clearRect(0, 0, apertura.w, apertura.h);
-      if (op > 0.002) {
-        ctx.save();
-        ctx.translate(apertura.w / 2, apertura.h / 2);
-        ctx.rotate(giro);
-        ctx.translate(-apertura.w / 2, -apertura.h / 2);
-        ctx.fillStyle = ACCENT;
-        ctx.globalAlpha = op * 0.8;
-        for (var i = 0; i < apertura.pts.length; i++) {
-          var tx = apertura.pts[i][0] * apertura.w, ty = apertura.pts[i][1] * apertura.h;
-          var px = tx + apertura.desde[i][0] * (1 - e);
-          var py = ty + apertura.desde[i][1] * (1 - e);
-          ctx.beginPath();
-          ctx.arc(px, py, 1.3, 0, TAU);
-          ctx.fill();
-        }
-        ctx.restore();
+      var rectPanel = panel.getBoundingClientRect();
+      if (rectPanel.width < 1 || rectPanel.height < 1) { apertura = null; return; }
+
+      // Buffer en píxeles de dispositivo, no en los px CSS que usan los otros
+      // canvas: acá se escribe directo al array de la imagen, así que el
+      // tamaño real del lienzo importa, no una transformación por cuadro.
+      var esc = Math.min(window.devicePixelRatio || 1, 1.5);
+      var w = Math.max(1, Math.round(rectPanel.width * esc));
+      var h = Math.max(1, Math.round(rectPanel.height * esc));
+      var tope = 500000, tot = w * h;
+      if (tot > tope) { var k = Math.sqrt(tope / tot); w = Math.round(w * k); h = Math.round(h * k); }
+      canvasPanel.width = w; canvasPanel.height = h;
+      canvasPanel.getContext("2d").setTransform(1, 0, 0, 1, 0, 0);
+
+      // Un solo buffer, escrito directo sobre el canvas visible con
+      // putImageData: nada de globalCompositeOperation. La alfa de cada
+      // píxel la decide este código, no cómo el navegador compone "lighter"
+      // -que fuerza opacidad total apenas hay una sola partícula encima-.
+      var ctxPanel = canvasPanel.getContext("2d");
+      var imgData = ctxPanel.createImageData(w, h);
+      var buf = imgData.data;
+      var img32 = new Uint32Array(buf.buffer);
+
+      var r = (parseFloat(getComputedStyle(panel).borderRadius) || 14) * esc;
+      var nParticulas = Math.max(1500, Math.min(9000, Math.round((w * h) / 70)));
+      var destinos = relleno(w, h, r, nParticulas);
+      var n = destinos.length;
+
+      // Origen: el centro de la campana, en el espacio del panel. Lanzador y
+      // panel son hermanos position:fixed -una resta de rects alcanza-.
+      var rectLanzador = launcher.getBoundingClientRect();
+      var origenX = ((rectLanzador.left + rectLanzador.width * 0.5) - rectPanel.left) * esc;
+      var origenY = ((rectLanzador.top + rectLanzador.height * 0.42) - rectPanel.top) * esc;
+
+      var cx = w / 2, cy = h / 2;
+      var angO = Math.atan2(origenY - cy, origenX - cx);
+      var radO = Math.hypot(origenX - cx, origenY - cy);
+      // Todas las partículas giran para el mismo lado y "desenrollan" el
+      // mismo número de vueltas: así el conjunto se lee como un solo
+      // remolino, no como cada una tomando su propio atajo.
+      var dir = Math.random() < 0.5 ? -1 : 1;
+      var vueltas = 1.2 + Math.random() * 0.6;
+
+      var angD = new Float32Array(n), radD = new Float32Array(n);
+      var psx = new Float32Array(n), psy = new Float32Array(n);
+      var retraso = new Float32Array(n);
+      for (var i = 0; i < n; i++) {
+        var dx = destinos[i][0] - cx, dy = destinos[i][1] - cy;
+        var a = Math.atan2(dy, dx);
+        while ((a - angO) * dir < 0) a += dir * TAU;
+        angD[i] = a + dir * vueltas * TAU;
+        radD[i] = Math.hypot(dx, dy);
+        psx[i] = origenX; psy[i] = origenY;
+        retraso[i] = Math.random() * 0.15; // sale en chorro, no todas juntas
       }
-      if (u >= 1) apertura = null;
+
+      var rgb = hexRGB(ACCENT);
+      apertura = {
+        t0: performance.now(), w: w, h: h, cx: cx, cy: cy,
+        angO: angO, radO: radO, angD: angD, radD: radD,
+        psx: psx, psy: psy, retraso: retraso, n: n,
+        imgData: imgData, buf: buf, img32: img32,
+        r: rgb[0], g: rgb[1], b: rgb[2]
+      };
+    }
+
+    function pintarApertura(ms) {
+      if (!apertura) return;
+      var A = apertura;
+      var ctx = canvasPanel.getContext("2d");
+      var u = cl((ms - A.t0) / DUR_OPEN, 0, 1);
+
+      // Todo -la oscuridad de fondo Y las partículas- se calcula en el MISMO
+      // buffer y se planta con putImageData, sin globalCompositeOperation:
+      // así la alfa de cada píxel es exactamente la que dice este código, no
+      // lo que "lighter" decide (que fuerza opacidad total apenas hay UNA
+      // partícula encima, sin importar cuán tenue sea la curva de fondo).
+      //
+      // Fondo: mucho más tenue que la pieza real -acá es un widget chico de
+      // esquina, no una escena de página completa- y se redibuja entero cada
+      // cuadro (no se acumula sobre el anterior), así el tope real es 0.5.
+      var alfaFondo = Math.round(255 * 0.50 * sm(0, 0.12, u) * (1 - sm(0.42, 1, u)));
+      var base = ((alfaFondo << 24) | (15 << 16) | (9 << 8) | 8) >>> 0;
+      A.img32.fill(base);
+
+      // El polvo se queda MUCHO más tiempo que antes -su cola se estira hasta
+      // el final- y su color migra de ámbar a blanco a medida que se asienta:
+      // así lo último que se ve del polvo ya es del mismo color que la
+      // tarjeta que queda debajo, y no hay un corte entre "nube" y "sólido".
+      // Esto es lo que hace que la tarjeta misma se sienta como la animación,
+      // no una animación que termina y una tarjeta que aparece después.
+      var intensidad = sm(0, 0.08, u) * (1 - sm(0.86, 1, u));
+      if (intensidad > 0.002) {
+        var ganancia = 9 * intensidad;
+        var blanquear = sm(0.45, 0.95, u);
+        var pr = mez(A.r, 255, blanquear), pg = mez(A.g, 255, blanquear), pb = mez(A.b, 255, blanquear);
+        for (var i = 0; i < A.n; i++) {
+          var ui = cl((u - A.retraso[i]) / (1 - A.retraso[i]), 0, 1);
+          var ei = e3(ui);
+          var ang = A.angO + (A.angD[i] - A.angO) * ei;
+          var rad = A.radO + (A.radD[i] - A.radO) * ei;
+          var sx = A.cx + Math.cos(ang) * rad;
+          var sy = A.cy + Math.sin(ang) * rad;
+
+          // Motion blur real: si se movió poco este cuadro, un paso alcanza;
+          // si voló, se reparte en varios sub-pasos a lo largo del tramo, y
+          // eso es lo que convierte un punto en una voluta, no un filtro.
+          var dxs = sx - A.psx[i], dys = sy - A.psy[i];
+          var dd = Math.abs(dxs) + Math.abs(dys);
+          var pasos = dd < 220 ? Math.min(6, 1 + ((dd * 0.55) | 0)) : 1;
+          var inv = ganancia / pasos;
+          var rr = pr * inv, gg = pg * inv, bb = pb * inv;
+          for (var q = 0; q < pasos; q++) {
+            var f = (q + 1) / pasos;
+            var X = (A.psx[i] + dxs * f) | 0, Y = (A.psy[i] + dys * f) | 0;
+            if (X >= 0 && X < A.w && Y >= 0 && Y < A.h) {
+              var o = (Y * A.w + X) << 2;
+              A.buf[o] += rr; A.buf[o + 1] += gg; A.buf[o + 2] += bb;
+              A.buf[o + 3] = 255; // donde toca una partícula, opaco del todo
+            }
+          }
+          A.psx[i] = sx; A.psy[i] = sy;
+        }
+      }
+      ctx.putImageData(A.imgData, 0, 0);
+
+      if (u >= 1) {
+        apertura = null;
+        ctx.clearRect(0, 0, canvasPanel.width, canvasPanel.height);
+      }
     }
 
     var corriendo = false, cuadro = null;
