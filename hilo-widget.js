@@ -82,8 +82,11 @@
     width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;
     background:var(--hilo-accent);color:var(--hilo-accent-fg);
     box-shadow:0 6px 24px rgba(0,0,0,.22);
-    display:grid;place-items:center;transition:transform .15s ease}
+    display:grid;place-items:center;
+    transition:transform .15s ease,opacity .35s ease,visibility .35s}
   .hilo-launcher:hover{transform:translateY(-2px)}
+  .hilo-launcher[data-oculto="true"]{opacity:0;visibility:hidden;pointer-events:none;
+    transform:translateY(10px)}
   .hilo-launcher:focus-visible{outline:3px solid var(--hilo-accent);outline-offset:3px}
   .hilo-panel{position:fixed;right:20px;bottom:88px;z-index:2147483000;
     width:min(370px,calc(100vw - 40px));height:min(520px,calc(100vh - 130px));
@@ -187,11 +190,31 @@
   document.body.appendChild(launcher);
   document.body.appendChild(panel);
 
+  // La página puede pedir que el lanzador se corra un rato: poniendo
+  // data-hilo-lanzador="oculto" en <html> (el sitio de Milagros lo hace
+  // mientras corre la animación de la campana, que ocupa la misma esquina).
+  // Sin ese atributo no cambia nada. Con el chat abierto nunca se esconde.
+  function sincronizarOculto() {
+    var pide = document.documentElement.getAttribute("data-hilo-lanzador") === "oculto";
+    var abierto = panel.getAttribute("data-open") === "true";
+    launcher.setAttribute("data-oculto", pide && !abierto ? "true" : "false");
+  }
+  new MutationObserver(sincronizarOculto).observe(document.documentElement,
+    { attributes: true, attributeFilter: ["data-hilo-lanzador"] });
+  new MutationObserver(sincronizarOculto).observe(panel,
+    { attributes: true, attributeFilter: ["data-open"] });
+  sincronizarOculto();
+
   // ── ícono opcional: la mascota-campana en vez de la burbuja ──────────────
-  // Mismo dibujo y mismo motor que lab/mesa/anim/campana-mascota.html,
-  // portado sin dependencias porque este archivo es el que se le entrega a
-  // cada cliente tal cual. Sin círculo de fondo: el botón directamente ES
-  // la animación, así que el hitbox del <button> es la propia campana.
+  // El badajo de fuego de la tarjeta Hilo (cv/tarjeta hilo/generar.py): la
+  // campana es el sombrerito y el fuego es la cara. Mismos trazos de campana,
+  // mismo ruido y mismo pulso de vela que la animación del sitio
+  // (components/campana/geometria.ts), portados sin dependencias porque este
+  // archivo es el que se le entrega a cada cliente tal cual. Sin placa ni
+  // fondo: la animación va directo sobre la página. Por eso la tinta toma el
+  // color del texto del sitio (oscura en claro, clara en oscuro) y el brillo
+  // se mezcla normal: en modo "screen" sobre un fondo claro desaparece, el
+  // mismo motivo por el que la vela de la portada tampoco lo usa.
   if (ICON === "campana") {
     (function (launcher, panel) {
       var TAU = Math.PI * 2;
@@ -199,17 +222,21 @@
       var mez = function (a, b, t) { return a + (b - a) * t; };
       var suavizar = function (t) { return t * t * (3 - 2 * t); };
 
-      var ANCHO = 64, ALTO = 116;   // proporción 338:614 del arte original
+      // Coordenadas de la tarjeta (508×587). La placa recorta la zona de la
+      // campana y la cara, con la misma proporción que el recorte de la tarjeta.
+      var VB = [160, 32, 188, 250];
+      var ANCHO = 60, ALTO = Math.round(ANCHO * VB[3] / VB[2]);
+      var ABAJO = 20;   // misma altura que la burbuja estándar
 
       launcher.style.background = "none";
       launcher.style.borderRadius = "0";
       launcher.style.boxShadow = "none";
       launcher.style.width = ANCHO + "px";
       launcher.style.height = ALTO + "px";
-      launcher.style.filter = "drop-shadow(0 6px 16px rgba(0,0,0,.22))";
-      // El panel se apoya en la altura real del lanzador, no en el valor fijo
-      // de la burbuja: si el tamaño de la mascota cambia, esto se acomoda solo.
-      panel.style.bottom = (20 + ALTO + 14) + "px";
+      launcher.style.bottom = ABAJO + "px";
+      launcher.style.filter = "none";
+      // El panel se apoya en la altura real del lanzador: si cambia, se acomoda solo.
+      panel.style.bottom = (ABAJO + ALTO + 14) + "px";
 
       var NS = "http://www.w3.org/2000/svg";
       function crear(tag, attrs, padre) {
@@ -218,28 +245,61 @@
         padre.appendChild(e);
         return e;
       }
+      function radial(id, stops) {
+        return '<radialGradient id="' + id + '">' + stops.map(function (s) {
+          return '<stop offset="' + s[0] + '" stop-color="' + s[1] + '" stop-opacity="' + s[2] + '"/>';
+        }).join("") + "</radialGradient>";
+      }
 
       launcher.innerHTML =
-        '<svg viewBox="338 187 338 614" width="' + ANCHO + '" height="' + ALTO + '"' +
-        ' preserveAspectRatio="xMidYMid meet" aria-hidden="true"' +
-        ' style="display:block;overflow:visible">' +
-        '<defs>' +
-        '<radialGradient id="hm-nucleo"><stop offset="0%" stop-color="#ffe89b"/>' +
-        '<stop offset="55%" stop-color="#f0b41c" stop-opacity=".97"/>' +
-        '<stop offset="100%" stop-color="#d69a0e" stop-opacity="0"/></radialGradient>' +
-        '<radialGradient id="hm-halo"><stop offset="0%" stop-color="#ffe89b" stop-opacity=".85"/>' +
-        '<stop offset="45%" stop-color="#f0b41c" stop-opacity=".28"/>' +
-        '<stop offset="100%" stop-color="#f0b41c" stop-opacity="0"/></radialGradient>' +
+        '<svg viewBox="' + VB.join(" ") + '" width="' + ANCHO + '" height="' + ALTO + '"' +
+        ' preserveAspectRatio="xMidYMid meet" aria-hidden="true" style="display:block;overflow:visible">' +
+        "<defs>" +
+        radial("hf-velo", [[0, "#eeac28", .34], [.5, "#eaa70b", .1], [1, "#eaa70b", 0]]) +
+        radial("hf-nucleo", [[0, "#ffeeba", .85], [.22, "#face58", .55], [.55, "#e8a616", .2], [1, "#e29e0a", 0]]) +
+        radial("hf-cuerpo", [[0, "#fff3cf", 1], [.55, "#ffd978", .96], [.8, "#f4b73a", .55], [1, "#eaa70b", 0]]) +
+        radial("hf-corazon", [[0, "#fffbe8", 1], [.35, "#fff0c0", .8], [.7, "#f7c53a", .35], [1, "#eaa70b", 0]]) +
+        radial("hf-sombrero", [[0, "#ffd98a", .55], [1, "#eaa70b", 0]]) +
         "</defs>" +
-        '<g id="hm-campana"></g><g id="hm-colgante"></g><g id="hm-ojos"></g>' +
+        '<g id="hf-badajo"></g><g id="hf-campana"></g>' +
         "</svg>";
 
       var svg = launcher.querySelector("svg");
-      var gCampana = svg.querySelector("#hm-campana");
-      var gColgante = svg.querySelector("#hm-colgante");
-      var gOjos = svg.querySelector("#hm-ojos");
+      var gBadajo = svg.querySelector("#hf-badajo");
+      var gCampana = svg.querySelector("#hf-campana");
 
-      // -- el sombrerito: el mismo contorno de components/campana --
+      // -- la escena, en las mismas medidas que la tarjeta --
+      var ESC = 0.34, TX = 254 - 507 * ESC, TY = 40 - 210 * ESC;
+      var BOCA = [506 * ESC + TX, 622 * ESC + TY];
+      var CARA = [BOCA[0], BOCA[1] + 44];
+      var BASE = 58;
+
+
+
+      // -- el fuego: velo, cinco núcleos que derivan, cuerpo denso y corazón --
+      var pantalla = {};
+      function circ(fill, extra) {
+        var a = { cx: CARA[0], cy: CARA[1], r: 1, fill: "url(#" + fill + ")" };
+        for (var k in extra) a[k] = extra[k];
+        return crear("circle", a, gBadajo);
+      }
+      var velo = circ("hf-velo", pantalla);
+      var nucleos = [];
+      for (var n = 0; n < 5; n++) nucleos.push(circ("hf-nucleo", pantalla));
+      var cuerpo = circ("hf-cuerpo", {});
+      var corazon = circ("hf-corazon", pantalla);
+
+      // -- los ojos: brasas oscuras, un poco ladeadas; miran y parpadean --
+      var gOjos = crear("g", {}, gBadajo);
+      var ojos = [-1, 1].map(function (s) {
+        var cx = CARA[0] + s * 17, cy = CARA[1] - 2;
+        var g = crear("g", { transform: "translate(" + cx + " " + cy + ")" }, gOjos);
+        var e = crear("ellipse", { cx: 0, cy: 0, rx: 6.6, ry: 9.4, fill: "#3b1a04",
+          transform: "rotate(" + (s * -8) + ")" }, g);
+        return { g: g, e: e, cx: cx, cy: cy };
+      });
+
+      // -- el sombrerito: el mismo contorno de components/campana, en tinta cálida --
       var CAMPANA = [
         { d: "M486 250 C474 232 484 210 502 212 C520 214 526 234 514 250", w: 9 },
         { d: "M478 258 L438 282 L420 318", w: 12 },
@@ -253,145 +313,107 @@
         { d: "M334 600 C424 628 586 628 678 600", w: 6 },
         { d: "M326 616 C420 646 590 646 686 616", w: 12 }
       ];
-      var PIVOTE = [500, 232], ESCALA_CAMPANA = 0.78;
-      var RIM_SIN_ESCALAR = [506, 638.5];
-      var RIM = [
-        PIVOTE[0] + ESCALA_CAMPANA * (RIM_SIN_ESCALAR[0] - PIVOTE[0]),
-        PIVOTE[1] + ESCALA_CAMPANA * (RIM_SIN_ESCALAR[1] - PIVOTE[1])
-      ];
-      gCampana.setAttribute("transform",
-        "translate(" + PIVOTE[0] + " " + PIVOTE[1] + ") scale(" + ESCALA_CAMPANA +
-        ") translate(" + (-PIVOTE[0]) + " " + (-PIVOTE[1]) + ")");
+      var luzSombrero = crear("ellipse", { cx: BOCA[0], cy: BOCA[1] - 30, rx: 58, ry: 52,
+        fill: "url(#hf-sombrero)" }, gCampana);
+      var gTrazos = crear("g", { transform: "translate(" + TX + " " + TY + ") scale(" + ESC + ")" }, gCampana);
       CAMPANA.forEach(function (t) {
-        crear("path", { d: t.d, fill: "none", stroke: "#1b1a17",
-          "stroke-linecap": "round", "stroke-linejoin": "round",
-          "stroke-width": t.w }, gCampana);
+        crear("path", { d: t.d, fill: "none", stroke: "currentColor",
+          "stroke-linecap": "round", "stroke-linejoin": "round", "stroke-width": t.w }, gTrazos);
       });
 
-      // -- los ojos: pupila chica y corrida, así se ve la medialuna sola --
-      var OJO_ESCALA = 0.85;
-      var OJO_RW = 42 * OJO_ESCALA, OJO_RP = 30 * OJO_ESCALA;
-      var OJOS_Y = RIM[1] + OJO_RW - 0.5;
-      var OJOS_X = [RIM[0] - 71, RIM[0] + 69];
-      var SESGO = [9 * OJO_ESCALA, 1 * OJO_ESCALA];
-      var MAX_OFF_X = 7 * OJO_ESCALA, MAX_OFF_Y = 4 * OJO_ESCALA;
+      // La tinta es el color del texto de la página, y se vuelve a leer si el sitio cambia de tema.
+      function tomarTinta() { launcher.style.color = getComputedStyle(document.body).color; }
+      tomarTinta();
+      new MutationObserver(tomarTinta).observe(document.documentElement,
+        { attributes: true, attributeFilter: ["class", "data-theme", "style"] });
 
-      var iris = OJOS_X.map(function (cx) {
-        crear("circle", { cx: cx, cy: OJOS_Y, r: OJO_RW, fill: "#fffdf6",
-          stroke: "#1b1a17", "stroke-width": 6 }, gOjos);
-        var g = crear("g", { transform:
-          "translate(" + (cx + SESGO[0]) + " " + (OJOS_Y + SESGO[1]) + ")" }, gOjos);
-        crear("circle", { r: OJO_RP, fill: "#1b1a17" }, g);
-        crear("ellipse", { cx: -2.5, cy: -12, rx: 8.5, ry: 6, fill: "#fff",
-          opacity: .92, transform: "rotate(-25 -2.5 -12)" }, g);
-        crear("ellipse", { cx: -15, cy: 13, rx: 5.5, ry: 4, fill: "#fff",
-          opacity: .85, transform: "rotate(18 -15 13)" }, g);
-        return { g: g, cx: cx };
-      });
-
-      [[OJOS_X[0] - 62, OJOS_Y - 14, .30], [OJOS_X[1] + 62, OJOS_Y - 14, .34],
-       [OJOS_X[0] - 30, OJOS_Y + 50, .22], [OJOS_X[1] + 30, OJOS_Y + 50, .24]]
-        .forEach(function (m) {
-          crear("circle", { cx: m[0], cy: m[1], r: 3.4, fill: "#1b1a17",
-            opacity: m[2] }, gOjos);
-        });
-
-      // -- el badajo, de nariz: nace en el labio, cordel ondulado de punta a punta --
-      var ANCLA = [RIM[0] + 0.3, RIM[1] - 2.5];
-      var BOLA = [RIM[0] - 2, RIM[1] + 169.5];
-      var halo = crear("circle", { cx: BOLA[0], cy: BOLA[1], r: 54,
-        fill: "url(#hm-halo)" }, gColgante);
-      crear("path", {
-        d: "M" + ANCLA[0].toFixed(1) + "," + ANCLA[1].toFixed(1) + " " +
-          "C489,562 521,576 505,590 C489,604 521,618 505,633 " +
-          "C489,648 521,662 505,676 C489,691 519,703 " +
-          BOLA[0].toFixed(1) + "," + BOLA[1].toFixed(1),
-        fill: "none", stroke: "#1b1a17", "stroke-linecap": "round",
-        "stroke-linejoin": "round", "stroke-width": 5.5
-      }, gColgante);
-      var nucleo = crear("circle", { cx: BOLA[0], cy: BOLA[1], r: 28,
-        fill: "url(#hm-nucleo)" }, gColgante);
-      function estrella(cx, cy, rE, rI) {
-        var pts = [];
-        for (var i = 0; i < 8; i++) {
-          var a = (i / 8) * TAU - Math.PI / 2, r = i % 2 === 0 ? rE : rI;
-          pts.push((cx + Math.cos(a) * r).toFixed(1) + "," +
-            (cy + Math.sin(a) * r).toFixed(1));
-        }
-        return "M" + pts.join("L") + "Z";
+      // -- ruido y vela: los del sitio, con la misma tabla --
+      var RED = (function () {
+        var s = 0x2f6e2b1, out = [];
+        for (var i = 0; i < 256; i++) { s = (s * 1103515245 + 12345) & 0x7fffffff; out.push(s / 0x7fffffff); }
+        return out;
+      })();
+      function ruido(x) {
+        var i0 = Math.floor(x), f = suavizar(x - i0);
+        return mez(RED[i0 & 255], RED[(i0 + 1) & 255], f);
       }
-      var chispa = crear("path", { d: estrella(BOLA[0] + 27, BOLA[1] - 24, 11, 4),
-        fill: "#fff8dd", opacity: 0 }, gColgante);
+      function vela(ms) {
+        var t = ms / 1000;
+        var v = 0.72 + 0.16 * Math.sin(t * 2.1 * TAU) + 0.09 * Math.sin(t * 5.3 * TAU + 1.7) +
+          0.05 * Math.sin(t * 11.7 * TAU + 4.1);
+        var r = ruido(t * 1.1);
+        if (r > 0.74) v -= (r - 0.74) * 2.2;
+        return lim(v, 0.14, 1);
+      }
 
-      // -- mirada: el puntero si es mouse y se movió hace poco, si no, barrido propio --
+      // -- mirada: el puntero si es mouse y se movió hace poco; si no, un barrido propio --
       var gx = 0, gy = 0, objX = 0, objY = 0, apuntando = false, ultimoMouse = -1e9;
       function puntoEnPantalla(x, y) {
-        var pt = new DOMPoint(x, y);
         var m = svg.getScreenCTM();
-        return m ? pt.matrixTransform(m) : { x: x, y: y };
+        return m ? new DOMPoint(x, y).matrixTransform(m) : { x: x, y: y };
       }
       window.addEventListener("pointermove", function (e) {
         if (e.pointerType && e.pointerType !== "mouse") return;
-        var centro = puntoEnPantalla((OJOS_X[0] + OJOS_X[1]) / 2, OJOS_Y);
-        var dx = e.clientX - centro.x, dy = e.clientY - centro.y;
-        var d = Math.hypot(dx, dy) || 1;
-        var mag = Math.tanh(d / 220);
-        objX = (dx / d) * mag; objY = (dy / d) * mag * .5;
+        var c = puntoEnPantalla(CARA[0], CARA[1]);
+        var dx = e.clientX - c.x, dy = e.clientY - c.y;
+        var d = Math.hypot(dx, dy) || 1, mag = Math.tanh(d / 220);
+        objX = (dx / d) * mag; objY = (dy / d) * mag * .6;
         apuntando = true; ultimoMouse = performance.now();
       }, { passive: true });
 
-      function miradaIdle(t) {
-        var T = 4.4;
-        return [Math.sin((t / T) * TAU), .16 * Math.sin((t / T) * TAU * 1.7 + 1.1)];
-      }
-
-      var RED = [];
-      for (var i = 0; i < 64; i++) RED.push(Math.random());
-      function ruido(x) {
-        var i0 = Math.floor(x), f = suavizar(x - i0);
-        return mez(RED[i0 & 63], RED[(i0 + 1) & 63], f);
-      }
-
       var quieto = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      var proximoParpadeo = 2600, parpadeoDesde = -1;
 
       function pintar(ms) {
         var t = ms / 1000;
+        var luz = vela(ms);
+        // un destello de vez en cuando: el fuego se aviva un instante
+        var rr0 = ruido(t * .5), guino = rr0 > .88 ? (rr0 - .88) / .12 : 0;
+        var r = BASE * mez(0.93, 1.07, luz) * (1 + guino * .1);
+
+        velo.setAttribute("r", (r * 1.9).toFixed(1));
+        velo.setAttribute("opacity", mez(.75, 1, luz).toFixed(3));
+        for (var i = 0; i < 5; i++) {
+          var giro = ruido(ms / (1300 + i * 290) + i * 9.7) * TAU;
+          var lejos = r * 0.4 * ruido(ms / (940 + i * 210) + i * 4.1);
+          var rr = r * mez(0.5, 1.05, ruido(ms / (780 + i * 160) + i * 2.3));
+          nucleos[i].setAttribute("cx", (CARA[0] + Math.cos(giro) * lejos).toFixed(1));
+          nucleos[i].setAttribute("cy", (CARA[1] + Math.sin(giro) * lejos * 1.25 - r * 0.1).toFixed(1));
+          nucleos[i].setAttribute("r", Math.max(rr, 1).toFixed(1));
+        }
+        cuerpo.setAttribute("r", (r * 0.78).toFixed(1));
+        corazon.setAttribute("r", (r * 0.62).toFixed(1));
+        corazon.setAttribute("opacity", lim(mez(.8, 1, luz) + guino * .3, 0, 1).toFixed(3));
+        luzSombrero.setAttribute("opacity", mez(.7, 1, luz).toFixed(3));
+
+        // se mece colgado de la boca, como el badajo del sitio
+        var meceo = quieto ? 0 : Math.sin(t * 1.15) * 2.1;
+        gBadajo.setAttribute("transform", "rotate(" + meceo.toFixed(2) + " " + BOCA[0].toFixed(1) + " " + BOCA[1].toFixed(1) + ")");
+
+        // mirada
         var tx, ty;
         if (!quieto && apuntando && ms - ultimoMouse < 3500) { tx = objX; ty = objY; }
-        else {
-          var idle = quieto ? [0, 0] : miradaIdle(t);
-          tx = idle[0]; ty = idle[1]; apuntando = false;
-        }
+        else { tx = quieto ? 0 : Math.sin((t / 4.4) * TAU) * .8; ty = quieto ? 0 : .2 * Math.sin((t / 4.4) * TAU * 1.7 + 1.1); apuntando = false; }
         var inercia = quieto ? 1 : .085;
         gx += (tx - gx) * inercia; gy += (ty - gy) * inercia;
-        var dx = gx * MAX_OFF_X, dy = gy * MAX_OFF_Y;
-        iris.forEach(function (o) {
-          o.g.setAttribute("transform",
-            "translate(" + (o.cx + SESGO[0] + dx).toFixed(2) + " " +
-            (OJOS_Y + SESGO[1] + dy).toFixed(2) + ")");
-        });
 
-        var angulo = quieto ? 0 : Math.sin((t * TAU) / 2.6) * 3;
-        gColgante.setAttribute("transform",
-          "rotate(" + angulo.toFixed(3) + " " + ANCLA[0] + " " + ANCLA[1] + ")");
-
+        // parpadeo: cada 3 a 6 segundos, 150 ms
+        var cierre = 1;
         if (!quieto) {
-          var base = .82 + .14 * Math.sin((t * TAU) / 2.3);
-          var r = ruido(t * .5);
-          var guino = r > .88 ? (r - .88) / .12 : 0;
-          var luz = lim(base + guino * .5, 0, 1);
-          nucleo.setAttribute("opacity", luz.toFixed(3));
-          nucleo.setAttribute("transform", "scale(" + (1 + guino * .22).toFixed(3) + ")");
-          nucleo.setAttribute("transform-origin", BOLA[0] + "px " + BOLA[1] + "px");
-          halo.setAttribute("opacity", (.55 + guino * .45).toFixed(3));
-          chispa.setAttribute("opacity", (guino * .9).toFixed(3));
-        } else {
-          nucleo.setAttribute("opacity", .9);
-          halo.setAttribute("opacity", .5);
+          if (parpadeoDesde < 0 && ms > proximoParpadeo) parpadeoDesde = ms;
+          if (parpadeoDesde >= 0) {
+            var p = (ms - parpadeoDesde) / 150;
+            if (p >= 1) { parpadeoDesde = -1; proximoParpadeo = ms + 3000 + ruido(t) * 3000; }
+            else cierre = 1 - Math.sin(p * Math.PI) * .9;
+          }
         }
-        requestAnimationFrame(pintar);
+        ojos.forEach(function (o) {
+          o.g.setAttribute("transform", "translate(" + (o.cx + gx * 4.5).toFixed(2) + " " +
+            (o.cy + gy * 3).toFixed(2) + ") scale(1 " + cierre.toFixed(3) + ")");
+        });
       }
 
+      if (quieto) { pintar(1300); return; }
       // Fuera de pantalla no hace falta seguir pintando.
       var visible = true;
       new IntersectionObserver(function (es) { visible = es[0].isIntersecting; },
