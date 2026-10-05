@@ -69,6 +69,11 @@
   var POLL_OPEN_MS = 2500;
   var POLL_AFTER_SEND_MS = 700;
   var POLL_AFTER_SEND_TRIES = 12;
+  // Con el chat abierto se pregunta cada 2,5 s. Una pestaña olvidada con el
+  // chat abierto eran ~1.400 pedidos por hora al servidor, para siempre. Se
+  // corta al ocultar la pestaña y tras 10 minutos sin que la persona escriba;
+  // vuelve sola al mostrar la pestaña o al escribir.
+  var POLL_IDLE_MS = 10 * 60 * 1000;
 
   if (!API) {
     console.error("[hilo] falta data-api en la etiqueta <script>.");
@@ -919,10 +924,26 @@
     });
   }
 
+  var lastActivity = Date.now();
+
   function startPolling() {
     stopPolling();
-    pollTimer = setInterval(collect, POLL_OPEN_MS);
+    lastActivity = Date.now();
+    pollTimer = setInterval(function () {
+      if (document.hidden || Date.now() - lastActivity > POLL_IDLE_MS) {
+        stopPolling();
+        return;
+      }
+      collect();
+    }, POLL_OPEN_MS);
   }
+
+  document.addEventListener("visibilitychange", function () {
+    if (!document.hidden && session && panel.getAttribute("data-open") === "true") {
+      collect();
+      startPolling();
+    }
+  });
 
   function stopPolling() {
     if (pollTimer) {
@@ -978,6 +999,9 @@
     sendButton.disabled = true;
     bubble("user", text);
     showTyping();
+
+    if (!pollTimer) startPolling();
+    lastActivity = Date.now();
 
     sendMessage(text, true).finally(function () {
       sendButton.disabled = false;
