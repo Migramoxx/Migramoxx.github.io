@@ -1,0 +1,6 @@
+# Si encontraste una falla de seguridad en este sitio, escribime.
+# If you found a security issue on this site, please email me.
+Contact: mailto:gramocanestro@gmail.com
+Expires: 2027-10-04T00:00:00.000Z
+Preferred-Languages: es, en
+Canonical: https://migramoxx.github.io/.well-known/security.txt
