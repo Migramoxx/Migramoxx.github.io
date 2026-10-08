@@ -17,6 +17,18 @@
  * volume a small business sees, a poll every two seconds while the panel is
  * open costs less than keeping a connection per visitor alive, and it
  * survives the proxies and captive networks a socket does not.
+ *
+ * Opcional: data-sugerencias="¿Cuánto sale?|¿Agenda turnos?" muestra esas
+ * preguntas como botones debajo del saludo hasta que el visitante escribe.
+ *
+ * Incrustado: la página puede meter el MISMO panel (misma sesión, mismo
+ * historial) adentro de un elemento suyo, siempre abierto y sin lanzador:
+ *
+ *   window.hiloWidget.incrustar(document.querySelector("#chat"));
+ *   window.hiloWidget.soltar();   // vuelve a flotante, cerrado
+ *
+ * Si el elemento desaparece sin llamar a soltar() (una navegación del lado
+ * del cliente), el panel vuelve solo a flotante.
  */
 (function () {
   "use strict";
@@ -42,7 +54,18 @@
   // corre en el sitio de ningún cliente. Sólo Milagros la prende, a mano,
   // en su propia etiqueta <script>.
   var ICON = script.getAttribute("data-icon") || "";
+  // Preguntas listas para tocar, separadas por "|". Con tope: es una ayuda
+  // para arrancar, no un menú.
+  var SUGERENCIAS = (script.getAttribute("data-sugerencias") || "")
+    .split("|")
+    .map(function (s) { return s.trim(); })
+    .filter(Boolean)
+    .slice(0, 6);
   var STORAGE_KEY = "hilo.session";
+  // Marca de que en esta pestaña el visitante ya escribió algo. Sin eso no
+  // hay nada que sondear: el agente sólo contesta mensajes, así que una
+  // sesión recién abierta no puede tener respuestas en cola.
+  var CHARLO_KEY = "hilo.charlo";
 
   // El texto sobre el acento se elige solo por luminancia, no por una lista
   // de casos: con el verde de siempre sigue dando blanco: con un acento claro
@@ -143,6 +166,18 @@
     height:calc(100% + 12px);pointer-events:none}
   .hilo-send:disabled{opacity:.5;cursor:default}
   .hilo-send:focus-visible{outline:3px solid var(--hilo-accent);outline-offset:2px}
+  .hilo-sug{align-self:flex-start;max-width:100%;display:flex;flex-wrap:wrap;gap:6px}
+  .hilo-sug-b{min-height:34px;padding:6px 11px;border:1px solid var(--hilo-line);
+    border-radius:999px;background:var(--hilo-bg);color:var(--hilo-fg);
+    font:inherit;font-size:13px;line-height:1.3;text-align:left;cursor:pointer}
+  .hilo-sug-b:hover{border-color:var(--hilo-accent)}
+  .hilo-sug-b:focus-visible{outline:2px solid var(--hilo-accent);outline-offset:2px}
+  /* Incrustado: ocupa la caja que le da la página. El !important le gana al
+     bottom en línea que le pone el ícono campana; con position:relative ese
+     bottom lo correría hacia arriba. */
+  .hilo-panel[data-modo="incrustado"]{position:relative;inset:auto!important;z-index:auto;
+    width:100%;height:100%;box-shadow:none}
+  .hilo-panel[data-modo="incrustado"] .hilo-close{display:none}
   :root{--hilo-accent:${ACCENT};--hilo-accent-fg:${ACCENT_FG};--hilo-bg:#fff;
     --hilo-fg:#16181d;--hilo-line:#e3e5ea;--hilo-bubble:#f1f3f6;--hilo-muted:#6b7280}
   @media (prefers-color-scheme:dark){
@@ -198,11 +233,13 @@
   // La página puede pedir que el lanzador se corra un rato: poniendo
   // data-hilo-lanzador="oculto" en <html> (el sitio de Milagros lo hace
   // mientras corre la animación de la campana, que ocupa la misma esquina).
-  // Sin ese atributo no cambia nada. Con el chat abierto nunca se esconde.
+  // Sin ese atributo no cambia nada. Con el chat abierto nunca se esconde,
+  // salvo que el panel esté incrustado en la página: ahí el lanzador sobra.
+  var incrustado = false;
   function sincronizarOculto() {
     var pide = document.documentElement.getAttribute("data-hilo-lanzador") === "oculto";
     var abierto = panel.getAttribute("data-open") === "true";
-    launcher.setAttribute("data-oculto", pide && !abierto ? "true" : "false");
+    launcher.setAttribute("data-oculto", (pide && !abierto) || incrustado ? "true" : "false");
   }
   new MutationObserver(sincronizarOculto).observe(document.documentElement,
     { attributes: true, attributeFilter: ["data-hilo-lanzador"] });
@@ -798,8 +835,15 @@
   // ── conversation ────────────────────────────────────────────────────────
 
   var session = null;
+  var sesionEnCurso = null;
   var pollTimer = null;
   var typing = null;
+  var charlo = false;
+  try {
+    charlo = sessionStorage.getItem(CHARLO_KEY) === "1";
+  } catch (error) {
+    charlo = false;
+  }
 
   function post(path, body) {
     return fetch(API + path, {
@@ -869,7 +913,12 @@
       return Promise.resolve(session);
     }
 
-    return post("/channels/web/session").then(function (data) {
+    // Un solo pedido a la vez: con el saludo al instante, el visitante puede
+    // tocar una sugerencia antes de que vuelva el primero, y sin esto salían
+    // dos sesiones para la misma pestaña.
+    if (sesionEnCurso) return sesionEnCurso;
+    sesionEnCurso = post("/channels/web/session").then(function (data) {
+      sesionEnCurso = null;
       session = data.session_id;
       try {
         sessionStorage.setItem(STORAGE_KEY, session);
@@ -877,7 +926,11 @@
         /* nothing to do; the id lives in memory for this page */
       }
       return session;
+    }, function (error) {
+      sesionEnCurso = null;
+      throw error;
     });
+    return sesionEnCurso;
   }
 
   // A session stored from a previous visit can outlive its server-side TTL
@@ -926,11 +979,20 @@
 
   var lastActivity = Date.now();
 
+  function abierto() {
+    return panel.getAttribute("data-open") === "true";
+  }
+
+  // Un solo intervalo (siempre se corta el anterior), y sólo si hay algo que
+  // esperar: con el panel incrustado, cada visita a la página lo tendría
+  // abierto, y sondear una sesión donde nadie escribió eran ~240 pedidos por
+  // visitante para nada.
   function startPolling() {
     stopPolling();
+    if (!charlo) return;
     lastActivity = Date.now();
     pollTimer = setInterval(function () {
-      if (document.hidden || Date.now() - lastActivity > POLL_IDLE_MS) {
+      if (document.hidden || !abierto() || Date.now() - lastActivity > POLL_IDLE_MS) {
         stopPolling();
         return;
       }
@@ -939,7 +1001,7 @@
   }
 
   document.addEventListener("visibilitychange", function () {
-    if (!document.hidden && session && panel.getAttribute("data-open") === "true") {
+    if (!document.hidden && session && charlo && abierto()) {
       collect();
       startPolling();
     }
@@ -952,50 +1014,124 @@
     }
   }
 
-  function open() {
+  // ── saludo y sugerencias ────────────────────────────────────────────────
+  // El saludo se dibuja apenas se abre, sin esperar al servidor. Antes iba
+  // adentro del .then de la sesión y, además, preguntaba por
+  // log.childElementCount: el log ya tiene adentro el canvas del contorno, así
+  // que esa cuenta nunca daba cero y el saludo no salía nunca.
+  var saludado = false;
+  var sugerencias = null;
+
+  function saludar() {
+    if (saludado) return;
+    saludado = true;
+    if (GREETING) bubble("agent", GREETING);
+    if (SUGERENCIAS.length && !charlo) mostrarSugerencias();
+  }
+
+  function mostrarSugerencias() {
+    sugerencias = document.createElement("div");
+    sugerencias.className = "hilo-sug";
+    sugerencias.setAttribute("role", "group");
+    sugerencias.setAttribute("aria-label", "Preguntas sugeridas");
+    SUGERENCIAS.forEach(function (texto) {
+      var boton = document.createElement("button");
+      boton.type = "button";
+      boton.className = "hilo-sug-b";
+      boton.textContent = texto;
+      boton.addEventListener("click", function () {
+        // El botón desaparece al mandar: el foco pasa al campo, no al vacío.
+        input.focus();
+        enviar(texto);
+      });
+      sugerencias.appendChild(boton);
+    });
+    log.appendChild(sugerencias);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  function quitarSugerencias() {
+    if (sugerencias) {
+      sugerencias.remove();
+      sugerencias = null;
+    }
+  }
+
+  // El aviso de que no se pudo abrir va debajo del saludo, una sola vez, y
+  // se va solo si un intento siguiente sale bien.
+  var avisoApertura = null;
+
+  function open(enfocar) {
+    var yaAbierto = abierto();
     panel.setAttribute("data-open", "true");
     launcher.setAttribute("aria-expanded", "true");
     launcher.setAttribute("aria-label", "Cerrar el chat");
-    contorno.armar();
+    // La nube de partículas sale de la campana: incrustado, la campana no está.
+    if (!yaAbierto && !incrustado) contorno.armar();
     contorno.iniciar();
+    saludar();
+    if (enfocar) input.focus();
 
     ensureSession()
       .then(function () {
-        if (GREETING && !log.childElementCount) bubble("agent", GREETING);
-        startPolling();
-        input.focus();
+        if (avisoApertura) {
+          avisoApertura.remove();
+          avisoApertura = null;
+        }
+        // Puede volver después de un soltar(): cerrado no se sondea.
+        if (abierto()) startPolling();
       })
       .catch(function () {
-        bubble("system", "No pudimos abrir el chat. Probá de nuevo en un momento.");
+        if (avisoApertura && avisoApertura.isConnected) return;
+        avisoApertura = bubble("system", "No pudimos abrir el chat. Probá de nuevo en un momento.");
       });
   }
 
-  function close() {
+  function close(devolverFoco) {
     panel.setAttribute("data-open", "false");
     launcher.setAttribute("aria-expanded", "false");
     launcher.setAttribute("aria-label", "Abrir el chat");
     stopPolling();
     contorno.detener();
-    launcher.focus();
+    if (devolverFoco) launcher.focus();
   }
 
   launcher.addEventListener("click", function () {
-    if (panel.getAttribute("data-open") === "true") close();
-    else open();
+    if (abierto()) close(true);
+    else open(true);
   });
 
-  panel.querySelector(".hilo-close").addEventListener("click", close);
+  panel.querySelector(".hilo-close").addEventListener("click", function () {
+    close(true);
+  });
 
   document.addEventListener("keydown", function (event) {
-    if (event.key === "Escape" && panel.getAttribute("data-open") === "true") close();
+    if (event.key === "Escape" && abierto() && !incrustado) close(true);
   });
 
-  form.addEventListener("submit", function (event) {
-    event.preventDefault();
-    var text = input.value.trim();
+  // Fuera de pantalla (incrustado más abajo en la página, o la pestaña en
+  // otro lado) el contorno de partículas no pinta.
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(function (entradas) {
+      if (entradas[0].isIntersecting && abierto()) contorno.iniciar();
+      else contorno.detener();
+    }).observe(panel);
+  }
+
+  function enviar(text) {
+    text = (text || "").trim();
     if (!text) return;
 
-    input.value = "";
+    quitarSugerencias();
+    if (!charlo) {
+      charlo = true;
+      try {
+        sessionStorage.setItem(CHARLO_KEY, "1");
+      } catch (error) {
+        /* queda en memoria para esta página */
+      }
+    }
+
     sendButton.disabled = true;
     bubble("user", text);
     showTyping();
@@ -1007,7 +1143,57 @@
       sendButton.disabled = false;
       input.focus();
     });
+  }
+
+  form.addEventListener("submit", function (event) {
+    event.preventDefault();
+    var text = input.value.trim();
+    if (!text) return;
+    input.value = "";
+    enviar(text);
   });
+
+  // ── incrustado ──────────────────────────────────────────────────────────
+  // Se mueve el mismo nodo, no se arma otro: la sesión, el historial y el
+  // único intervalo de sondeo siguen siendo los mismos.
+  var vigia = null;
+
+  function incrustar(elemento) {
+    if (!elemento || elemento.nodeType !== 1) return false;
+    if (incrustado && panel.parentNode === elemento) return true;
+    incrustado = true;
+    panel.setAttribute("data-modo", "incrustado");
+    panel.setAttribute("role", "region");
+    elemento.appendChild(panel);
+    sincronizarOculto();
+    // Una página que navega del lado del cliente puede tirar el contenedor
+    // sin avisar. Mientras dure, se mira sólo si el panel sigue en la página.
+    if (!vigia && "MutationObserver" in window) {
+      vigia = new MutationObserver(function () {
+        if (incrustado && !panel.isConnected) soltar();
+      });
+      vigia.observe(document.body, { childList: true, subtree: true });
+    }
+    // Sin foco: robarlo al cargar movería la página y abriría el teclado.
+    open(false);
+    return true;
+  }
+
+  function soltar() {
+    if (!incrustado) return;
+    incrustado = false;
+    if (vigia) {
+      vigia.disconnect();
+      vigia = null;
+    }
+    panel.removeAttribute("data-modo");
+    panel.setAttribute("role", "dialog");
+    document.body.appendChild(panel);
+    close(false);
+    sincronizarOculto();
+  }
+
+  window.hiloWidget = { incrustar: incrustar, soltar: soltar };
 
   // retryOnRejectedSession: a 403 here almost always means the session id
   // this tab had (from sessionStorage, or the one already in memory) is one
