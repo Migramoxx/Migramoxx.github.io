@@ -13,6 +13,11 @@
  * never generated here: a client-chosen id would let anyone read somebody
  * else's chat by guessing it.
  *
+ * Dos Hilo en una misma página (ítem 78): las claves de sessionStorage llevan
+ * el servidor ("hilo.session@" + data-api), así el agente de un sitio y el
+ * café de la demo no se borran la sesión uno al otro; y un 429 al mandar
+ * dice que se llegó al límite de mensajes de la hora, no «no pudimos enviar».
+ *
  * Replies are collected by polling rather than a socket. For the message
  * volume a small business sees, a poll every two seconds while the panel is
  * open costs less than keeping a connection per visitor alive, and it
@@ -61,11 +66,20 @@
     .map(function (s) { return s.trim(); })
     .filter(Boolean)
     .slice(0, 6);
-  var STORAGE_KEY = "hilo.session";
+  // Las claves llevan el servidor: con una fija ("hilo.session"), dos Hilo
+  // en el mismo origen (el agente de Milagros y el café de la demo, en un
+  // iframe del mismo sitio) se pisaban la sesión, y cada uno le borraba la
+  // conversación al otro. El que tenía una pestaña abierta con la clave vieja
+  // empieza una sesión nueva una vez.
+  var STORAGE_KEY = "hilo.session@" + API;
   // Marca de que en esta pestaña el visitante ya escribió algo. Sin eso no
   // hay nada que sondear: el agente sólo contesta mensajes, así que una
   // sesión recién abierta no puede tener respuestas en cola.
-  var CHARLO_KEY = "hilo.charlo";
+  var CHARLO_KEY = "hilo.charlo@" + API;
+  // Un 429 no es una falla: el servidor llegó a su tope de la hora (el del
+  // widget entero o el de sesiones por dirección). Decir «no pudimos enviar»
+  // invita a reintentar enseguida, que es justo lo que no sirve.
+  var AVISO_LIMITE = "Llegamos al límite de mensajes de esta hora. Probá de nuevo en un rato.";
 
   // El texto sobre el acento se elige solo por luminancia, no por una lista
   // de casos: con el verde de siempre sigue dando blanco: con un acento claro
@@ -1214,6 +1228,10 @@
           return sendMessage(text, false);
         }
         hideTyping();
+        if (error && error.status === 429) {
+          bubble("system", AVISO_LIMITE);
+          return;
+        }
         bubble("system", "No pudimos enviar el mensaje. Probá de nuevo.");
       });
   }
