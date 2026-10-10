@@ -188,9 +188,11 @@
   .hilo-sug-b:focus-visible{outline:2px solid var(--hilo-accent);outline-offset:2px}
   /* Incrustado: ocupa la caja que le da la página. El !important le gana al
      bottom en línea que le pone el ícono campana; con position:relative ese
-     bottom lo correría hacia arriba. */
+     bottom lo correría hacia arriba. border-box: con width:100% y el borde,
+     en una página sin box-sizing global el panel se pasaba 2 px de su caja
+     (medido en la demo del café, 09/10/2026). */
   .hilo-panel[data-modo="incrustado"]{position:relative;inset:auto!important;z-index:auto;
-    width:100%;height:100%;box-shadow:none}
+    width:100%;height:100%;box-shadow:none;box-sizing:border-box}
   .hilo-panel[data-modo="incrustado"] .hilo-close{display:none}
   :root{--hilo-accent:${ACCENT};--hilo-accent-fg:${ACCENT_FG};--hilo-bg:#fff;
     --hilo-fg:#16181d;--hilo-line:#e3e5ea;--hilo-bubble:#f1f3f6;--hilo-muted:#6b7280}
