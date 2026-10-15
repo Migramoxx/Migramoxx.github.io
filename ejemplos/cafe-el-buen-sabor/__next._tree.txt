@@ -1,4 +1,4 @@
 :HL["/_next/static/chunks/42sm5d-xw62m0.css","style"]
 :HL["/_next/static/media/d0f5953821b08bc1-s.p.1sj2vuw194_rx.woff2","font",{"crossOrigin":"","type":"font/woff2"}]
 :HL["/_next/static/chunks/0utobw29l0qga.css","style"]
-0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"(ejemplos)","param":null,"prefetchHints":4208,"slots":{"children":{"name":"ejemplos","param":null,"prefetchHints":4192,"slots":{"children":{"name":"cafe-el-buen-sabor","param":null,"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}}}}}},"staleTime":300,"buildId":"_fsuHPrznNTaaJbLVQ0tZ"}
+0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"(ejemplos)","param":null,"prefetchHints":4208,"slots":{"children":{"name":"ejemplos","param":null,"prefetchHints":4192,"slots":{"children":{"name":"cafe-el-buen-sabor","param":null,"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}}}}}},"staleTime":300,"buildId":"1Tyo8TXGhI0Z7MWzrjC4w"}
