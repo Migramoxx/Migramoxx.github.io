@@ -1,4 +1,4 @@
 :HL["/_next/static/chunks/3j3r2bj19kd0m.css","style"]
-:HL["/_next/static/chunks/335u7x64l63oy.css","style"]
+:HL["/_next/static/chunks/1i47wj72ksq08.css","style"]
 :HL["/_next/static/chunks/2dgt1-x519n4_.css","style"]
-0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"/_not-found","param":null,"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}},"staleTime":300,"buildId":"agqVYrL3Fi8sM4rZvNfQM"}
+0:{"tree":{"name":"","param":null,"prefetchHints":4176,"slots":{"children":{"name":"/_not-found","param":null,"prefetchHints":4192,"slots":{"children":{"name":"__PAGE__","param":null,"prefetchHints":4256,"slots":null}}}}},"staleTime":300,"buildId":"MANb85gl54-SmTkf3tgA5"}
