@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<!--
+  El chat del Café El Buen Sabor (ficticio), para la demo de la agenda.
+
+  Va en un iframe del mismo origen porque el widget es uno por página
+  (window.hiloWidget, :root, ids y escuchadores globales), y la página que lo
+  muestra ya tiene al agente de Milagros. Acá adentro hay un segundo widget
+  con su propia sesión, sin tocar al de afuera. Ítem 78 de Hilo,
+  PLAN-DEMO-CAFE.md §3.5.
+
+  CSP propia y cerrada, medida contra lo que el widget usa de verdad:
+  · script-src 'self': el widget y arranque.js, sin guiones en línea;
+  · style-src 'unsafe-inline': el widget mete su <style> por JavaScript, y
+    esta página trae el suyo acá abajo;
+  · connect-src: solo el Hilo del café (la ruta /cafe/, no el servidor entero);
+  · img-src data:: queda por si el widget dibuja algo embebido. Las
+    partículas son <canvas> y los íconos son SVG en línea: ninguno pide red.
+  · sin font-src: el widget y este cuadro usan las fuentes del sistema.
+  Va antes que cualquier otra cosa: una CSP por <meta> solo cubre lo que viene
+  después. scripts/csp-hashes.mjs también pasa por este archivo (encuentra el
+  <meta>), pero como no hay guiones en línea no le agrega nada: la política
+  queda igual. Si un día se agrega uno, ese script le sumaría su hash; mejor
+  llevarlo a un .js y que siga sin haber guiones en línea.
+-->
+<meta http-equiv="Content-Security-Policy" content="default-src &#x27;none&#x27;; script-src &#x27;self&#x27;; style-src &#x27;unsafe-inline&#x27;; connect-src https://hilo-campana.duckdns.org/cafe/; img-src data:; base-uri &#x27;none&#x27;; form-action &#x27;none&#x27;">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Es una pieza de la página /servicios/hilo/demo-agenda/, no una página.
+     `follow` y no `nofollow`: no hay nada que esconder (trampa 10 de la skill). -->
+<meta name="robots" content="noindex, follow">
+<title>Chat del Café El Buen Sabor (ficticio)</title>
+<style>
+  /* Lo mismo que hace Tailwind en el resto del sitio. Sin esto, el panel
+     incrustado (width:100% más su borde) se pasaba 2 px y había scroll
+     horizontal adentro del iframe. */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    display: flex; flex-direction: column; gap: 12px;
+    font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: var(--hilo-fg, #16181d);
+    background: transparent;
+  }
+  /* El panel del widget llena esta caja (data-modo="incrustado"). */
+  #chat { flex: 1 1 auto; min-height: 340px; }
+
+  /* El cuadro: lo mismo que le llegaría al dueño. Con los colores del widget,
+     que los define en :root, para que parezca una pieza del mismo panel. */
+  .recepcion {
+    flex: 0 0 auto; max-height: 42%; overflow-y: auto;
+    padding: 14px; border: 1px solid var(--hilo-line, #e3e5ea); border-radius: 14px;
+    background: var(--hilo-bg, #fff);
+  }
+  .recepcion h2 { margin: 0; font-size: 15px; font-weight: 600; }
+  .explica, .estado { margin: 4px 0 0; font-size: 13px; color: var(--hilo-muted, #6b7280); }
+  .avisos { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  .avisos li {
+    padding: 9px 12px; border-radius: 10px; background: var(--hilo-bubble, #f1f3f6);
+    border-left: 3px solid var(--hilo-accent, #8a4b2a);
+  }
+  .avisos p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 14px; }
+  .avisos time { display: block; margin-top: 2px; font-size: 12px; color: var(--hilo-muted, #6b7280); }
+  .ver {
+    margin-top: 10px; min-height: 44px; padding: 0 14px; border-radius: 999px;
+    border: 1px solid var(--hilo-line, #e3e5ea); background: transparent; color: inherit;
+    font: inherit; font-size: 14px; cursor: pointer;
+  }
+  .ver:hover { border-color: var(--hilo-accent, #8a4b2a); }
+  .ver:focus-visible { outline: 2px solid var(--hilo-accent, #8a4b2a); outline-offset: 2px; }
+  .ver:disabled { opacity: .55; cursor: default; }
+</style>
+</head>
+<body>
+  <div id="chat"></div>
+
+  <section class="recepcion" aria-labelledby="recepcion-titulo">
+    <h2 id="recepcion-titulo">Esto es lo que le llega a tu recepción</h2>
+    <p class="explica">En un negocio real, este aviso le llega al dueño por WhatsApp. Acá no se manda a nadie: lo ves vos, y solo desde esta pestaña.</p>
+    <ol class="avisos" id="avisos" aria-live="polite"></ol>
+    <p class="estado" id="estado">Cuando reserves o pidas un turno, el aviso aparece acá.</p>
+    <button class="ver" id="ver" type="button">Ver qué le llegó a la recepción</button>
+  </section>
+
+  <!-- La misma etiqueta que se le entrega a un cliente, apuntada al Hilo del
+       café. `defer` en los dos: corren en orden, así que cuando arranca
+       arranque.js el widget ya existe. -->
+  <script
+    defer
+    src="/hilo-widget.js"
+    data-api="https://hilo-campana.duckdns.org/cafe"
+    data-title="Café El Buen Sabor (ficticio)"
+    data-accent="#8a4b2a"
+    data-placeholder="Preguntá o pedí una reserva"
+    data-greeting="Hola. Soy el asistente del Café El Buen Sabor, un café ficticio armado para que pruebes cómo se reserva. Preguntame por la carta o los horarios, o pedime el salón del fondo para un grupo."
+    data-sugerencias="¿Tienen el salón para 10 el sábado?|¿Qué horarios hay mañana?|¿Cuánto sale el latte?"
+  ></script>
+  <script defer src="/demos/cafe/arranque.js"></script>
+</body>
+</html>
