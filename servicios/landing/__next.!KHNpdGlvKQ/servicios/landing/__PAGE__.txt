@@ -1,5 +1,5 @@
 1:"$Sreact.fragment"
-3:I[46573,["/_next/static/chunks/0m3oclw6oxg3s.js","/_next/static/chunks/21fecj2p8xsso.js","/_next/static/chunks/3akaf_lwdlci_.js","/_next/static/chunks/2iyki1ce8d59i.js","/_next/static/chunks/07mkzw5t0wqtk.js","/_next/static/chunks/2i-zzm0ukagmd.js","/_next/static/chunks/11xoagnz_mfun.js","/_next/static/chunks/13465lmk6at9e.js"],"ExperienciaLanding"]
+3:I[46573,["/_next/static/chunks/1ifd4a1b2ft_d.js","/_next/static/chunks/21fecj2p8xsso.js","/_next/static/chunks/3akaf_lwdlci_.js","/_next/static/chunks/2iyki1ce8d59i.js","/_next/static/chunks/07mkzw5t0wqtk.js","/_next/static/chunks/2i-zzm0ukagmd.js","/_next/static/chunks/11xoagnz_mfun.js","/_next/static/chunks/13465lmk6at9e.js"],"ExperienciaLanding"]
 4:I[97367,["/_next/static/chunks/0h2qsuyze9ds1.js"],"OutletBoundary"]
 5:"$Sreact.suspense"
 9:I[97367,["/_next/static/chunks/0h2qsuyze9ds1.js"],"ViewportBoundary"]
@@ -8,40 +8,41 @@ a:I[97367,["/_next/static/chunks/0h2qsuyze9ds1.js"],"MetadataBoundary"]
 :HL["/_next/static/chunks/32k9u66pispi2.css","style"]
 :HL["/_next/static/chunks/267noxvyaht-4.css","style"]
 2:T7a2,{"@context":"https://schema.org","@graph":[{"@type":"Person","@id":"https://migramoxx.github.io/#milagros","name":"Milagros Canestro","jobTitle":"AI Automation Engineer","url":"https://migramoxx.github.io","email":"mailto:gramocanestro@gmail.com","sameAs":["https://github.com/Migramoxx"],"knowsLanguage":["es","en"]},{"@type":"ProfessionalService","@id":"https://migramoxx.github.io/#negocio","name":"Milagros Canestro","description":"Diseño tu página a medida, con animación y código propio, y armo el agente que contesta tu WhatsApp y anota cada consulta. Precio cerrado y todo a tu nombre.","url":"https://migramoxx.github.io","image":"https://migramoxx.github.io/opengraph-image.png","email":"mailto:gramocanestro@gmail.com","telephone":"+5491158743097","founder":{"@id":"https://migramoxx.github.io/#milagros"},"address":{"@type":"PostalAddress","addressLocality":"Buenos Aires","addressCountry":"AR"},"areaServed":{"@type":"Country","name":"Argentina"},"availableLanguage":["es","en"],"priceRange":"USD 90 – USD 3000","sameAs":["https://github.com/Migramoxx"]},{"@type":"Service","@id":"https://migramoxx.github.io/servicios/landing/#servicio","name":"Páginas web · cobre, plata y oro","description":"Código Next.js real, no un constructor con cuota mensual.","url":"https://migramoxx.github.io/servicios/landing/","serviceType":"Páginas web · cobre, plata y oro","provider":{"@id":"https://migramoxx.github.io/#negocio"},"areaServed":{"@type":"Country","name":"Argentina"},"offers":{"@type":"Offer","availability":"https://schema.org/InStock","priceSpecification":{"@type":"PriceSpecification","minPrice":1000,"priceCurrency":"USD","valueAddedTaxIncluded":false}}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Inicio","item":"https://migramoxx.github.io/"},{"@type":"ListItem","position":2,"name":"Páginas web · cobre, plata y oro","item":"https://migramoxx.github.io/servicios/landing/"}]}]}8:X
-22:X
-22:C
-0:{"buildId":"_eRwK7i57MBlokPPw7AGt","data":[{"rsc":["$","$1","c",{"children":[[["$","script",null,{"type":"application/ld+json","dangerouslySetInnerHTML":{"__html":"$2"}}],["$","$L3",null,{}]],[["$","link","0",{"rel":"stylesheet","href":"/_next/static/chunks/2ru-rqvp0l2ur.css","precedence":"next"}],["$","link","1",{"rel":"stylesheet","href":"/_next/static/chunks/32k9u66pispi2.css","precedence":"next"}],["$","link","2",{"rel":"stylesheet","href":"/_next/static/chunks/267noxvyaht-4.css","precedence":"next"}],["$","script","script-0",{"src":"/_next/static/chunks/21fecj2p8xsso.js","async":true}],["$","script","script-1",{"src":"/_next/static/chunks/3akaf_lwdlci_.js","async":true}],["$","script","script-2",{"src":"/_next/static/chunks/2iyki1ce8d59i.js","async":true}],["$","script","script-3",{"src":"/_next/static/chunks/07mkzw5t0wqtk.js","async":true}],["$","script","script-4",{"src":"/_next/static/chunks/2i-zzm0ukagmd.js","async":true}],["$","script","script-5",{"src":"/_next/static/chunks/11xoagnz_mfun.js","async":true}],["$","script","script-6",{"src":"/_next/static/chunks/13465lmk6at9e.js","async":true}]],["$","$L4",null,{"children":["$","$5",null,{"name":"Next.MetadataOutlet","children":"$@6"}]}]]}],"isPartial":"$@7","staleTime":"$8","varyParams":null},{"rsc":["$","$1","h",{"children":[null,["$","$L9",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}],["$","meta","2",{"name":"theme-color","content":"#faf7ee","media":"(prefers-color-scheme: light)"}],["$","meta","3",{"name":"theme-color","content":"#101312","media":"(prefers-color-scheme: dark)"}]]}],["$","div",null,{"hidden":true,"children":["$","$La",null,{"children":["$","$5",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"Una landing que se explica a sí misma — Milagros Canestro"}],"$Lb","$Lc","$Ld","$Le","$Lf","$L10","$L11","$L12","$L13","$L14","$L15","$L16","$L17","$L18","$L19","$L1a","$L1b","$L1c","$L1d"]}]}]}],"$L1e"]}],"isPartial":"$@1f","staleTime":"$8","varyParams":null},{"rsc":"$L20","isPartial":"$@21","staleTime":"$8","varyParams":"$22"},{"rsc":"$L23","isPartial":"$@24","staleTime":"$8","varyParams":"$22"}],"isUpgradeableISRFallback":false,"a":"$@25","rootVaryParams":null,"needsRuntimeRequest":"$@26"}
-27:I[27201,["/_next/static/chunks/0h2qsuyze9ds1.js"],"IconMark"]
-28:I[39756,["/_next/static/chunks/0h2qsuyze9ds1.js"],"default"]
-29:I[37457,["/_next/static/chunks/0h2qsuyze9ds1.js"],"default"]
+23:X
+23:C
+0:{"buildId":"bPGOyVhY_ycqWc7_4fPz2","data":[{"rsc":["$","$1","c",{"children":[[["$","script",null,{"type":"application/ld+json","dangerouslySetInnerHTML":{"__html":"$2"}}],["$","$L3",null,{}]],[["$","link","0",{"rel":"stylesheet","href":"/_next/static/chunks/2ru-rqvp0l2ur.css","precedence":"next"}],["$","link","1",{"rel":"stylesheet","href":"/_next/static/chunks/32k9u66pispi2.css","precedence":"next"}],["$","link","2",{"rel":"stylesheet","href":"/_next/static/chunks/267noxvyaht-4.css","precedence":"next"}],["$","script","script-0",{"src":"/_next/static/chunks/21fecj2p8xsso.js","async":true}],["$","script","script-1",{"src":"/_next/static/chunks/3akaf_lwdlci_.js","async":true}],["$","script","script-2",{"src":"/_next/static/chunks/2iyki1ce8d59i.js","async":true}],["$","script","script-3",{"src":"/_next/static/chunks/07mkzw5t0wqtk.js","async":true}],["$","script","script-4",{"src":"/_next/static/chunks/2i-zzm0ukagmd.js","async":true}],["$","script","script-5",{"src":"/_next/static/chunks/11xoagnz_mfun.js","async":true}],["$","script","script-6",{"src":"/_next/static/chunks/13465lmk6at9e.js","async":true}]],["$","$L4",null,{"children":["$","$5",null,{"name":"Next.MetadataOutlet","children":"$@6"}]}]]}],"isPartial":"$@7","staleTime":"$8","varyParams":null},{"rsc":["$","$1","h",{"children":[null,["$","$L9",null,{"children":[["$","meta","0",{"charSet":"utf-8"}],["$","meta","1",{"name":"viewport","content":"width=device-width, initial-scale=1"}],["$","meta","2",{"name":"theme-color","content":"#faf7ee","media":"(prefers-color-scheme: light)"}],["$","meta","3",{"name":"theme-color","content":"#101312","media":"(prefers-color-scheme: dark)"}]]}],["$","div",null,{"hidden":true,"children":["$","$La",null,{"children":["$","$5",null,{"name":"Next.Metadata","children":[["$","title","0",{"children":"Una landing que se explica a sí misma — Milagros Canestro"}],"$Lb","$Lc","$Ld","$Le","$Lf","$L10","$L11","$L12","$L13","$L14","$L15","$L16","$L17","$L18","$L19","$L1a","$L1b","$L1c","$L1d","$L1e"]}]}]}],"$L1f"]}],"isPartial":"$@20","staleTime":"$8","varyParams":null},{"rsc":"$L21","isPartial":"$@22","staleTime":"$8","varyParams":"$23"},{"rsc":"$L24","isPartial":"$@25","staleTime":"$8","varyParams":"$23"}],"isUpgradeableISRFallback":false,"a":"$@26","rootVaryParams":null,"needsRuntimeRequest":"$@27"}
+28:I[27201,["/_next/static/chunks/0h2qsuyze9ds1.js"],"IconMark"]
+29:I[39756,["/_next/static/chunks/0h2qsuyze9ds1.js"],"default"]
+2a:I[37457,["/_next/static/chunks/0h2qsuyze9ds1.js"],"default"]
 6:null
 b:["$","meta","1",{"name":"description","content":"Demostración en vivo del servicio de landing: la página vende una landing y al mismo tiempo explica qué recurso usa cada sección y por qué convierte."}]
 c:["$","meta","2",{"name":"author","content":"Milagros Canestro"}]
 d:["$","link","3",{"rel":"canonical","href":"https://migramoxx.github.io/servicios/landing/"}]
-e:["$","meta","4",{"property":"og:title","content":"Una landing que se explica a sí misma — Milagros Canestro"}]
-f:["$","meta","5",{"property":"og:description","content":"Demostración en vivo del servicio de landing: la página vende una landing y al mismo tiempo explica qué recurso usa cada sección y por qué convierte."}]
-10:["$","meta","6",{"property":"og:url","content":"https://migramoxx.github.io/servicios/landing/"}]
-11:["$","meta","7",{"property":"og:site_name","content":"Milagros Canestro"}]
-12:["$","meta","8",{"property":"og:locale","content":"es_AR"}]
-13:["$","meta","9",{"property":"og:image","content":"https://migramoxx.github.io/servicios/landing/opengraph-image.png"}]
-14:["$","meta","10",{"property":"og:image:width","content":"1200"}]
-15:["$","meta","11",{"property":"og:image:height","content":"630"}]
-16:["$","meta","12",{"property":"og:image:alt","content":"Una landing que se explica a sí misma — Milagros Canestro"}]
-17:["$","meta","13",{"property":"og:type","content":"website"}]
-18:["$","meta","14",{"name":"twitter:card","content":"summary_large_image"}]
-19:["$","meta","15",{"name":"twitter:title","content":"Una landing que se explica a sí misma — Milagros Canestro"}]
-1a:["$","meta","16",{"name":"twitter:description","content":"Demostración en vivo del servicio de landing: la página vende una landing y al mismo tiempo explica qué recurso usa cada sección y por qué convierte."}]
-1b:["$","meta","17",{"name":"twitter:image","content":"https://migramoxx.github.io/servicios/landing/opengraph-image.png"}]
-1c:["$","link","18",{"rel":"icon","href":"/icon.svg?icon.1nc8noffmxt83.svg","sizes":"any","type":"image/svg+xml"}]
-1d:["$","$L27","19",{}]
-1e:["$","meta",null,{"name":"next-size-adjust","content":""}]
-20:["$","$1","c",{"children":[null,["$","$L28",null,{"parallelRouterKey":"children","template":["$","$L29",null,{}]}]]}]
-23:["$","$1","c",{"children":[null,["$","$L28",null,{"parallelRouterKey":"children","template":["$","$L29",null,{}]}]]}]
-26:true
+e:["$","meta","4",{"name":"google-site-verification","content":"V1B710tz1O4dQRoETzBqiw7joECPvUkMmWubze8UA6Q"}]
+f:["$","meta","5",{"property":"og:title","content":"Una landing que se explica a sí misma — Milagros Canestro"}]
+10:["$","meta","6",{"property":"og:description","content":"Demostración en vivo del servicio de landing: la página vende una landing y al mismo tiempo explica qué recurso usa cada sección y por qué convierte."}]
+11:["$","meta","7",{"property":"og:url","content":"https://migramoxx.github.io/servicios/landing/"}]
+12:["$","meta","8",{"property":"og:site_name","content":"Milagros Canestro"}]
+13:["$","meta","9",{"property":"og:locale","content":"es_AR"}]
+14:["$","meta","10",{"property":"og:image","content":"https://migramoxx.github.io/servicios/landing/opengraph-image.png"}]
+15:["$","meta","11",{"property":"og:image:width","content":"1200"}]
+16:["$","meta","12",{"property":"og:image:height","content":"630"}]
+17:["$","meta","13",{"property":"og:image:alt","content":"Una landing que se explica a sí misma — Milagros Canestro"}]
+18:["$","meta","14",{"property":"og:type","content":"website"}]
+19:["$","meta","15",{"name":"twitter:card","content":"summary_large_image"}]
+1a:["$","meta","16",{"name":"twitter:title","content":"Una landing que se explica a sí misma — Milagros Canestro"}]
+1b:["$","meta","17",{"name":"twitter:description","content":"Demostración en vivo del servicio de landing: la página vende una landing y al mismo tiempo explica qué recurso usa cada sección y por qué convierte."}]
+1c:["$","meta","18",{"name":"twitter:image","content":"https://migramoxx.github.io/servicios/landing/opengraph-image.png"}]
+1d:["$","link","19",{"rel":"icon","href":"/icon.svg?icon.2tuzaqrb5w_zh.svg","sizes":"any","type":"image/svg+xml"}]
+1e:["$","$L28","20",{}]
+1f:["$","meta",null,{"name":"next-size-adjust","content":""}]
+21:["$","$1","c",{"children":[null,["$","$L29",null,{"parallelRouterKey":"children","template":["$","$L2a",null,{}]}]]}]
+24:["$","$1","c",{"children":[null,["$","$L29",null,{"parallelRouterKey":"children","template":["$","$L2a",null,{}]}]]}]
+27:true
 8:300
 8:C
-25:0
-1f:"$undefined"
-21:"$undefined"
-24:"$undefined"
+26:0
+20:"$undefined"
+22:"$undefined"
+25:"$undefined"
 7:"$undefined"
