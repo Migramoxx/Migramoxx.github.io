@@ -26,6 +26,10 @@
  * Opcional: data-sugerencias="¿Cuánto sale?|¿Agenda turnos?" muestra esas
  * preguntas como botones debajo del saludo hasta que el visitante escribe.
  *
+ * Opcional: data-tema="clase" hace que el panel siga sólo la clase "dark"
+ * (o data-theme="dark") de <html>, para sitios con su propio botón de tema.
+ * Sin el atributo sigue al sistema, salvo que <html> marque uno.
+ *
  * Incrustado: la página puede meter el MISMO panel (misma sesión, mismo
  * historial) adentro de un elemento suyo, siempre abierto y sin lanzador:
  *
@@ -97,6 +101,22 @@
   }
   var ACCENT_FG = textoLegibleSobre(ACCENT);
 
+  // El anillo de foco de la caja de escritura: el acento, transparente.
+  function hexAlfa(hex, alfa) {
+    var m = /^#?([\da-f]{2})([\da-f]{2})([\da-f]{2})$/i.exec(hex || "");
+    if (!m) return "rgba(0,0,0," + alfa + ")";
+    return "rgba(" + parseInt(m[1], 16) + "," + parseInt(m[2], 16) + "," +
+      parseInt(m[3], 16) + "," + alfa + ")";
+  }
+
+  // De dónde sale el tema claro u oscuro. "auto" (el default): una clase o un
+  // data-theme explícito en <html> manda, y si no hay, el del sistema.
+  // "clase": sólo la clase "dark" o data-theme="dark" en <html>, para sitios
+  // con su propio botón de tema que marcan el oscuro y nunca el claro (el de
+  // Milagros): con "auto", un visitante con el sistema en oscuro que eligió
+  // el sitio en claro veía el panel oscuro sobre una página clara.
+  var TEMA = script.getAttribute("data-tema") === "clase" ? "clase" : "auto";
+
   // Cuánto tarda la tarjeta en formarse cuando se abre: lo comparten el CSS
   // (la revelación del contenido sólido) y el canvas (la convergencia de las
   // partículas), para que sean la misma animación y no dos que coinciden por
@@ -130,62 +150,114 @@
   .hilo-launcher[data-oculto="true"]{opacity:0;visibility:hidden;pointer-events:none;
     transform:translateY(10px)}
   .hilo-launcher:focus-visible{outline:3px solid var(--hilo-accent);outline-offset:3px}
+  /* El panel (29/10/2026): el patrón de los asistentes actuales (Claude,
+     Intercom). Cabecera neutra con avatar y estado, el agente escribe sobre
+     el fondo sin burbuja, el visitante en una burbuja suave, y una caja de
+     escritura que crece con el texto. El acento queda para lo que se toca:
+     avatar, enviar, foco y los tres puntos. */
   .hilo-panel{position:fixed;right:20px;bottom:88px;z-index:2147483000;
-    width:min(370px,calc(100vw - 40px));height:min(520px,calc(100vh - 130px));
-    display:none;flex-direction:column;overflow:hidden;
+    width:min(390px,calc(100vw - 40px));height:min(600px,calc(100vh - 120px));
+    display:none;flex-direction:column;overflow:hidden;box-sizing:border-box;
     background:var(--hilo-bg);color:var(--hilo-fg);
-    border:1px solid var(--hilo-line);border-radius:14px;
-    box-shadow:0 18px 50px rgba(0,0,0,.24);
-    font:15px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+    border:1px solid var(--hilo-line);border-radius:20px;
+    box-shadow:0 1px 2px rgba(0,0,0,.06),0 12px 28px -6px rgba(0,0,0,.18),
+      0 32px 64px -16px rgba(0,0,0,.24);
+    font:15px/1.55 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased;text-align:left}
+  .hilo-panel *,.hilo-panel *::before{box-sizing:border-box}
   .hilo-panel[data-open="true"]{display:flex;
     animation:hilo-materializar ${DUR_OPEN}ms ease-out both}
   .hilo-panel[data-open="true"] .hilo-panel-cont{
     animation:hilo-materializar-contenido ${DUR_OPEN}ms ease-out both}
   @keyframes hilo-materializar{0%{opacity:0}100%{opacity:1}}
-  @keyframes hilo-materializar-contenido{0%,35%{opacity:0}92%{opacity:1}}
+  @keyframes hilo-materializar-contenido{0%,35%{opacity:0;transform:translateY(8px)}
+    92%{opacity:1;transform:none}}
   .hilo-panel-c{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   .hilo-panel-cont{display:flex;flex-direction:column;min-height:0;flex:1}
-  .hilo-head{display:flex;align-items:center;justify-content:space-between;gap:8px;
-    padding:12px 14px;background:var(--hilo-accent);color:var(--hilo-accent-fg);
-    font-weight:600}
-  .hilo-close{background:none;border:0;color:var(--hilo-accent-fg);font-size:22px;
-    line-height:1;cursor:pointer;padding:2px 6px;border-radius:6px}
-  .hilo-close:focus-visible{outline:2px solid var(--hilo-accent-fg);outline-offset:1px}
-  .hilo-log{flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:10px;
-    position:relative}
-  .hilo-log-c{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-  .hilo-msg{max-width:82%;padding:9px 12px;border-radius:13px;white-space:pre-wrap;
-    overflow-wrap:anywhere;background:#fff;border:0}
-  .hilo-msg[data-from="user"]{align-self:flex-end;color:var(--hilo-fg);
-    border-bottom-right-radius:4px}
-  .hilo-msg[data-from="agent"]{align-self:flex-start;color:var(--hilo-fg);
-    border-bottom-left-radius:4px}
-  .hilo-msg[data-from="system"]{align-self:center;font-size:13px;color:var(--hilo-muted);
-    background:none;text-align:center}
-  .hilo-typing{align-self:flex-start;display:flex;gap:4px;padding:11px 13px;
-    background:var(--hilo-bubble);border-radius:13px;border-bottom-left-radius:4px}
-  .hilo-typing i{width:6px;height:6px;border-radius:50%;background:var(--hilo-muted);
-    animation:hilo-blink 1.2s infinite}
-  .hilo-typing i:nth-child(2){animation-delay:.2s}
-  .hilo-typing i:nth-child(3){animation-delay:.4s}
-  @keyframes hilo-blink{0%,60%,100%{opacity:.25}30%{opacity:1}}
-  .hilo-form{display:flex;gap:8px;padding:10px;border-top:1px solid var(--hilo-line)}
-  .hilo-input{flex:1;padding:10px 12px;border:1px solid var(--hilo-line);border-radius:9px;
-    background:var(--hilo-bg);color:var(--hilo-fg);font:inherit;min-width:0}
-  .hilo-input:focus-visible{outline:2px solid var(--hilo-accent);outline-offset:-1px}
-  .hilo-send{padding:0 15px;border:0;border-radius:9px;background:#fff;
-    color:var(--hilo-fg);font:inherit;font-weight:600;cursor:pointer;
-    position:relative;overflow:visible}
-  .hilo-send-c{position:absolute;inset:-6px;width:calc(100% + 12px);
-    height:calc(100% + 12px);pointer-events:none}
-  .hilo-send:disabled{opacity:.5;cursor:default}
-  .hilo-send:focus-visible{outline:3px solid var(--hilo-accent);outline-offset:2px}
-  .hilo-sug{align-self:flex-start;max-width:100%;display:flex;flex-wrap:wrap;gap:6px}
-  .hilo-sug-b{min-height:34px;padding:6px 11px;border:1px solid var(--hilo-line);
-    border-radius:999px;background:var(--hilo-bg);color:var(--hilo-fg);
-    font:inherit;font-size:13px;line-height:1.3;text-align:left;cursor:pointer}
-  .hilo-sug-b:hover{border-color:var(--hilo-accent)}
+
+  .hilo-head{flex:none;display:flex;align-items:center;gap:10px;
+    padding:12px 10px 12px 14px;border-bottom:1px solid var(--hilo-line)}
+  .hilo-av{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;
+    background:var(--hilo-accent);color:var(--hilo-accent-fg)}
+  .hilo-av svg{width:17px;height:17px;display:block}
+  .hilo-head-txt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+  .hilo-title{font-weight:600;font-size:14.5px;white-space:nowrap;overflow:hidden;
+    text-overflow:ellipsis}
+  .hilo-estado{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--hilo-muted)}
+  .hilo-estado::before{content:"";width:7px;height:7px;border-radius:50%;
+    background:var(--hilo-ok);box-shadow:0 0 0 3px var(--hilo-ok-halo)}
+  .hilo-estado[data-caido]::before{background:var(--hilo-muted);box-shadow:none}
+  .hilo-icon-b{flex:none;width:32px;height:32px;display:grid;place-items:center;padding:0;
+    border:0;border-radius:10px;background:none;color:var(--hilo-muted);cursor:pointer;
+    transition:background .15s,color .15s}
+  .hilo-icon-b:hover{background:var(--hilo-bubble);color:var(--hilo-fg)}
+  .hilo-icon-b:focus-visible{outline:2px solid var(--hilo-accent);outline-offset:1px}
+  .hilo-icon-b svg{width:18px;height:18px;display:block}
+
+  .hilo-log{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+    padding:18px 16px 10px;display:flex;flex-direction:column;gap:16px;
+    scrollbar-width:thin;scrollbar-color:var(--hilo-line) transparent}
+  .hilo-row{display:flex;gap:10px;align-items:flex-start;
+    animation:hilo-entra .32s cubic-bezier(.2,.8,.2,1) both}
+  .hilo-row[data-from="user"]{justify-content:flex-end}
+  .hilo-row[data-seguido]{margin-top:-8px}
+  .hilo-row[data-seguido] .hilo-av{visibility:hidden}
+  .hilo-row .hilo-av{width:26px;height:26px}
+  .hilo-row .hilo-av svg{width:14px;height:14px}
+  .hilo-msg{min-width:0;white-space:pre-wrap;overflow-wrap:anywhere}
+  .hilo-row[data-from="agent"] .hilo-msg{flex:1;padding-top:2px}
+  .hilo-row[data-from="user"] .hilo-msg{max-width:85%;padding:9px 14px;
+    background:var(--hilo-bubble);border-radius:18px 18px 6px 18px}
+  .hilo-msg a{color:inherit;text-decoration:underline;text-decoration-thickness:2px;
+    text-decoration-color:var(--hilo-accent);text-underline-offset:3px}
+  .hilo-aviso{align-self:center;max-width:92%;padding:6px 12px;border-radius:12px;
+    background:var(--hilo-bubble);color:var(--hilo-muted);font-size:12.5px;
+    line-height:1.4;text-align:center;animation:hilo-entra .32s ease-out both}
+  @keyframes hilo-entra{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  /* Los tres puntos: una ola, no un parpadeo. */
+  .hilo-typing{display:flex;align-items:center;gap:5px;height:26px;padding-left:2px}
+  .hilo-typing i{width:7px;height:7px;border-radius:50%;background:var(--hilo-accent);
+    animation:hilo-ola 1.3s ease-in-out infinite}
+  .hilo-typing i:nth-child(2){animation-delay:.16s}
+  .hilo-typing i:nth-child(3){animation-delay:.32s}
+  @keyframes hilo-ola{0%,60%,100%{transform:translateY(0);opacity:.35}
+    30%{transform:translateY(-5px);opacity:1}}
+
+  .hilo-sug{display:flex;flex-direction:column;align-items:flex-start;gap:6px;
+    padding-left:36px;margin-top:-4px}
+  .hilo-sug-b{display:inline-flex;align-items:center;gap:8px;min-height:36px;
+    padding:7px 13px;border:1px solid var(--hilo-line);border-radius:12px;
+    background:var(--hilo-bg);color:var(--hilo-fg);font:inherit;font-size:13.5px;
+    line-height:1.3;text-align:left;cursor:pointer;
+    animation:hilo-entra .32s cubic-bezier(.2,.8,.2,1) both;
+    transition:border-color .15s,background .15s,transform .15s}
+  .hilo-sug-b::before{content:"";flex:none;width:6px;height:6px;border-radius:50%;
+    background:var(--hilo-accent)}
+  .hilo-sug-b:hover{border-color:var(--hilo-accent);background:var(--hilo-raise)}
+  .hilo-sug-b:active{transform:scale(.98)}
   .hilo-sug-b:focus-visible{outline:2px solid var(--hilo-accent);outline-offset:2px}
+
+  .hilo-form{flex:none;margin:0;padding:6px 12px 10px}
+  .hilo-caja{display:flex;align-items:flex-end;gap:8px;padding:5px 5px 5px 14px;
+    border:1px solid var(--hilo-line);border-radius:18px;background:var(--hilo-raise);
+    transition:border-color .15s,box-shadow .15s}
+  .hilo-caja:focus-within{border-color:var(--hilo-accent);box-shadow:0 0 0 3px var(--hilo-anillo)}
+  .hilo-input{flex:1;min-width:0;height:34px;max-height:132px;margin:0;padding:6px 0;
+    border:0;outline:0;resize:none;background:none;color:var(--hilo-fg);
+    font:inherit;line-height:1.45;overflow-y:auto}
+  .hilo-input::placeholder{color:var(--hilo-muted);opacity:1}
+  .hilo-send{flex:none;width:34px;height:34px;padding:0;border:0;border-radius:50%;
+    display:grid;place-items:center;background:var(--hilo-accent);color:var(--hilo-accent-fg);
+    cursor:pointer;transition:transform .15s,background .15s,color .15s}
+  .hilo-send svg{width:18px;height:18px;display:block}
+  .hilo-send:hover:not(:disabled){transform:scale(1.06)}
+  .hilo-send:active:not(:disabled){transform:scale(.94)}
+  .hilo-send:disabled{background:var(--hilo-line);color:var(--hilo-muted);cursor:default}
+  .hilo-send:focus-visible{outline:2px solid var(--hilo-accent);outline-offset:2px}
+  .hilo-pie{margin:7px 0 0;font-size:11px;line-height:1.3;color:var(--hilo-muted);
+    text-align:center}
+
   /* Incrustado: ocupa la caja que le da la página. El !important le gana al
      bottom en línea que le pone el ícono campana; con position:relative ese
      bottom lo correría hacia arriba. border-box: con width:100% y el borde,
@@ -194,16 +266,25 @@
   .hilo-panel[data-modo="incrustado"]{position:relative;inset:auto!important;z-index:auto;
     width:100%;height:100%;box-shadow:none;box-sizing:border-box}
   .hilo-panel[data-modo="incrustado"] .hilo-close{display:none}
-  :root{--hilo-accent:${ACCENT};--hilo-accent-fg:${ACCENT_FG};--hilo-bg:#fff;
-    --hilo-fg:#16181d;--hilo-line:#e3e5ea;--hilo-bubble:#f1f3f6;--hilo-muted:#6b7280}
-  @media (prefers-color-scheme:dark){
-    :root{--hilo-bg:#16181d;--hilo-fg:#f2f3f5;--hilo-line:#2c3039;--hilo-bubble:#23262e;
-      --hilo-muted:#9aa1ad}
-    .hilo-msg[data-from="user"],.hilo-msg[data-from="agent"],.hilo-send{
-      background:#20232b;color:var(--hilo-fg)}}
+  /* En el teléfono, flotante, ocupa la pantalla: un panel de 390 px en una
+     de 375 deja dos tiras de página que no se pueden tocar. 16 px en el
+     campo para que iOS no haga zoom al enfocarlo. */
+  @media (max-width:520px){
+    .hilo-panel:not([data-modo="incrustado"]){inset:0!important;width:100%;height:100%;
+      height:100dvh;border:0;border-radius:0}
+    .hilo-input{font-size:16px}}
+
+  :root{--hilo-accent:${ACCENT};--hilo-accent-fg:${ACCENT_FG}}
+  .hilo-panel{--hilo-bg:#fff;--hilo-fg:#1a1b1f;--hilo-muted:#6b6e78;--hilo-line:#e6e6e9;
+    --hilo-bubble:#f2f1ee;--hilo-raise:#fafaf9;--hilo-ok:#1f9d55;
+    --hilo-ok-halo:rgba(31,157,85,.16);--hilo-anillo:${hexAlfa(ACCENT, 0.2)}}
+  .hilo-panel[data-tema="oscuro"]{--hilo-bg:#18191c;--hilo-fg:#ececee;--hilo-muted:#9b9ea8;
+    --hilo-line:#2e2f35;--hilo-bubble:#26272c;--hilo-raise:#1f2024;--hilo-ok:#3ccf7a;
+    --hilo-ok-halo:rgba(60,207,122,.16);--hilo-anillo:${hexAlfa(ACCENT, 0.28)}}
   @media (prefers-reduced-motion:reduce){
-    .hilo-launcher{transition:none}.hilo-typing i{animation:none;opacity:.5}
-    .hilo-panel[data-open="true"]{animation:none}}
+    .hilo-launcher{transition:none}.hilo-typing i{animation:none;opacity:.6}
+    .hilo-row,.hilo-aviso,.hilo-sug-b{animation:none}
+    .hilo-panel[data-open="true"],.hilo-panel[data-open="true"] .hilo-panel-cont{animation:none}}
   `;
 
   var style = document.createElement("style");
@@ -224,6 +305,20 @@
       '<path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 8.9 8.9 0 0 1-4-.9L3 21l1.9-4.9A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>';
   }
 
+  // El avatar del agente: la campanita si el sitio la eligió como lanzador,
+  // si no, el mismo globo de diálogo del lanzador estándar.
+  var AVATAR = '<span class="hilo-av" aria-hidden="true">' + (ICON === "campana"
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
+      ' stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.5v1.6"/>' +
+      '<path d="M6.6 16.5 7.4 10a4.6 4.6 0 0 1 9.2 0l.8 6.5"/><path d="M4.8 16.8h14.4"/>' +
+      '<circle cx="12" cy="19.6" r="1.5" fill="currentColor" stroke="none"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
+      ' stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-9' +
+      ' 8.4 8.9 8.9 0 0 1-4-.9L3 21l1.9-4.9A8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z"/></svg>') +
+    "</span>";
+  var SVG = ' viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"' +
+    ' stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"';
+
   var panel = document.createElement("div");
   panel.className = "hilo-panel";
   panel.setAttribute("data-open", "false");
@@ -231,20 +326,48 @@
   panel.setAttribute("aria-label", TITLE);
   panel.innerHTML =
     '<div class="hilo-panel-cont">' +
-    '<div class="hilo-head"><span></span>' +
-    '<button class="hilo-close" type="button" aria-label="Cerrar el chat">&times;</button></div>' +
+    '<div class="hilo-head">' + AVATAR +
+    '<div class="hilo-head-txt"><span class="hilo-title"></span>' +
+    '<span class="hilo-estado">Responde al instante</span></div>' +
+    '<button class="hilo-icon-b hilo-reset" type="button" title="Conversación nueva"' +
+    ' aria-label="Empezar una conversación nueva"><svg' + SVG + '>' +
+    '<path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>' +
+    '<button class="hilo-icon-b hilo-close" type="button" title="Cerrar"' +
+    ' aria-label="Cerrar el chat"><svg' + SVG + '><path d="M18 6 6 18M6 6l12 12"/></svg>' +
+    "</button></div>" +
     '<div class="hilo-log" role="log" aria-live="polite" aria-atomic="false"></div>' +
-    '<form class="hilo-form">' +
-    '<label class="hilo-sr" for="hilo-input" hidden>Mensaje</label>' +
-    '<input class="hilo-input" id="hilo-input" autocomplete="off" />' +
-    '<button class="hilo-send" type="submit">Enviar</button>' +
+    '<form class="hilo-form"><div class="hilo-caja">' +
+    '<textarea class="hilo-input" rows="1" autocomplete="off" aria-label="Mensaje"></textarea>' +
+    '<button class="hilo-send" type="submit" aria-label="Enviar" disabled><svg' + SVG +
+    '><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/></svg></button></div>' +
+    '<p class="hilo-pie">Te contesta una IA: puede equivocarse.</p>' +
     "</form></div>";
 
-  panel.querySelector(".hilo-head span").textContent = TITLE;
+  panel.querySelector(".hilo-title").textContent = TITLE;
   panel.querySelector(".hilo-input").placeholder = PLACEHOLDER;
 
   document.body.appendChild(launcher);
   document.body.appendChild(panel);
+
+  function temaOscuro() {
+    var html = document.documentElement;
+    var marca = html.getAttribute("data-theme");
+    if (html.classList.contains("dark") || marca === "dark") return true;
+    if (TEMA === "clase") return false;
+    if (html.classList.contains("light") || marca === "light") return false;
+    return !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  }
+  function aplicarTema() {
+    panel.setAttribute("data-tema", temaOscuro() ? "oscuro" : "claro");
+  }
+  aplicarTema();
+  new MutationObserver(aplicarTema).observe(document.documentElement,
+    { attributes: true, attributeFilter: ["class", "data-theme"] });
+  if (TEMA === "auto" && window.matchMedia) {
+    var sistema = window.matchMedia("(prefers-color-scheme: dark)");
+    if (sistema.addEventListener) sistema.addEventListener("change", aplicarTema);
+    else if (sistema.addListener) sistema.addListener(aplicarTema);
+  }
 
   // La página puede pedir que el lanzador se corra un rato: poniendo
   // data-hilo-lanzador="oculto" en <html> (el sitio de Milagros lo hace
@@ -489,15 +612,13 @@
   var input = panel.querySelector(".hilo-input");
   var sendButton = panel.querySelector(".hilo-send");
 
-  // ── contorno de partículas: Enviar + burbujas ─────────────────────────────
-  // Reemplaza el relleno de color por fondo blanco con un borde dibujado por
-  // partículas quietas en reposo, que se apartan cuando el mouse pasa cerca y
-  // vuelven solas (resorte amortiguado). Mismo espíritu que el polvo del hub
-  // (components/ui/hub-polvo.tsx) -amplitud por partícula que varía poco, para
-  // que se lea como una nube y no como ruido-, pero de cero: aquél traza
-  // órbitas alrededor de un círculo, esto traza el perímetro de un rectángulo
-  // redondeado, y ese perímetro no existe en ningún lado del código de ella.
-  var contorno = (function () {
+  // ── la nube que arma el panel ──────────────────────────────────────────
+  // Hasta el 29/10/2026 este módulo también dibujaba un contorno de
+  // partículas alrededor de cada burbuja y del botón Enviar, con un cuadro
+  // por frame mientras el chat estuviera abierto. Con el panel nuevo (el
+  // agente sin burbuja, enviar redondo) ese contorno no tenía dónde ir y se
+  // fue; queda la apertura, que es la firma: el panel sale de la campana.
+  var nube = (function () {
     var TAU = Math.PI * 2;
     var cl = function (x, a, b) { return x < a ? a : x > b ? b : x; };
     // Las dos curvas del motor real (particulas-transmutacion.tsx): sm es la
@@ -506,148 +627,10 @@
     var sm = function (a, b, x) { var t = cl((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
     var e3 = function (x) { return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2; };
     var reducido = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    var MUTED = getComputedStyle(document.documentElement)
-      .getPropertyValue("--hilo-muted").trim() || "#8a8f99";
 
-    var mx = -9999, my = -9999, apuntando = false;
-    window.addEventListener("pointermove", function (e) {
-      if (e.pointerType && e.pointerType !== "mouse") return;
-      mx = e.clientX; my = e.clientY; apuntando = true;
-    }, { passive: true });
-
-    // Camina el contorno de un rectángulo con radio propio por esquina (las
-    // burbujas tienen una esquina casi recta, la "cola"), y devuelve n puntos
-    // parejos en fracción 0..1 de w/h -así, si el elemento cambia de tamaño,
-    // el punto sigue estando "en el mismo lugar" del contorno sin recalcular-.
-    function perimetro(w, h, rTL, rTR, rBR, rBL, n) {
-      var tramos = [
-        { len: Math.max(0, w - rTL - rTR),
-          fn: function (t) { return [rTL + t * (w - rTL - rTR), 0]; } },
-        { len: (Math.PI / 2) * rTR,
-          fn: function (t) { var a = -Math.PI / 2 + t * (Math.PI / 2);
-            return [w - rTR + Math.cos(a) * rTR, rTR + Math.sin(a) * rTR]; } },
-        { len: Math.max(0, h - rTR - rBR),
-          fn: function (t) { return [w, rTR + t * (h - rTR - rBR)]; } },
-        { len: (Math.PI / 2) * rBR,
-          fn: function (t) { var a = t * (Math.PI / 2);
-            return [w - rBR + Math.cos(a) * rBR, h - rBR + Math.sin(a) * rBR]; } },
-        { len: Math.max(0, w - rBR - rBL),
-          fn: function (t) { return [w - rBR - t * (w - rBR - rBL), h]; } },
-        { len: (Math.PI / 2) * rBL,
-          fn: function (t) { var a = Math.PI / 2 + t * (Math.PI / 2);
-            return [rBL + Math.cos(a) * rBL, h - rBL + Math.sin(a) * rBL]; } },
-        { len: Math.max(0, h - rBL - rTL),
-          fn: function (t) { return [0, h - rBL - t * (h - rBL - rTL)]; } },
-        { len: (Math.PI / 2) * rTL,
-          fn: function (t) { var a = Math.PI + t * (Math.PI / 2);
-            return [rTL + Math.cos(a) * rTL, rTL + Math.sin(a) * rTL]; } }
-      ];
-      var total = tramos.reduce(function (s, tr) { return s + tr.len; }, 0) || 1;
-      var pts = [];
-      for (var i = 0; i < n; i++) {
-        var s = (i / n) * total, acc = 0, k, p;
-        for (k = 0; k < tramos.length; k++) {
-          if (s <= acc + tramos[k].len || k === tramos.length - 1) {
-            var t = tramos[k].len > 0 ? (s - acc) / tramos[k].len : 0;
-            p = tramos[k].fn(Math.max(0, Math.min(1, t)));
-            break;
-          }
-          acc += tramos[k].len;
-        }
-        pts.push([p[0] / w, p[1] / h]);
-      }
-      return pts;
-    }
-
-    var datosPorElemento = new WeakMap();
-    function datosDe(el) {
-      var d = datosPorElemento.get(el);
-      if (d) return d;
-      var rect = el.getBoundingClientRect();
-      var w = rect.width || 1, h = rect.height || 1;
-      var est = getComputedStyle(el);
-      var rTL = parseFloat(est.borderTopLeftRadius) || 0;
-      var rTR = parseFloat(est.borderTopRightRadius) || 0;
-      var rBR = parseFloat(est.borderBottomRightRadius) || 0;
-      var rBL = parseFloat(est.borderBottomLeftRadius) || 0;
-      var n = Math.max(14, Math.min(40, Math.round((w + h) / 9)));
-      var pts = perimetro(w, h, rTL, rTR, rBR, rBL, n);
-      d = {
-        pts: pts,
-        ox: pts.map(function () { return 0; }),
-        oy: pts.map(function () { return 0; }),
-        vx: pts.map(function () { return 0; }),
-        vy: pts.map(function () { return 0; }),
-        fase: pts.map(function () { return Math.random() * TAU; }),
-        amp: pts.map(function () { return 0.88 + Math.random() * 0.24; })
-      };
-      datosPorElemento.set(el, d);
-      return d;
-    }
-
-    // Un canvas por zona (el log entero, el botón), no uno por burbuja.
-    function crearCanvas(contenedor, clase) {
-      var c = document.createElement("canvas");
-      c.className = clase;
-      contenedor.appendChild(c);
-      return c;
-    }
-    function ajustar(c) {
-      var rect = c.getBoundingClientRect();
-      var dpr = window.devicePixelRatio || 1;
-      var w = Math.max(1, Math.round(rect.width * dpr));
-      var h = Math.max(1, Math.round(rect.height * dpr));
-      if (c.width !== w || c.height !== h) { c.width = w; c.height = h; }
-      var ctx = c.getContext("2d");
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      return ctx;
-    }
-
-    function pintarItems(ctx, canvasRect, items, t) {
-      items.forEach(function (item) {
-        var rect = item.el.getBoundingClientRect();
-        if (rect.width < 1) return;
-        if (rect.bottom < canvasRect.top - 30 || rect.top > canvasRect.bottom + 30) return;
-        var d = datosDe(item.el);
-        ctx.fillStyle = item.tono === "accent" ? ACCENT : MUTED;
-        for (var i = 0; i < d.pts.length; i++) {
-          var px0 = rect.left - canvasRect.left + d.pts[i][0] * rect.width;
-          var py0 = rect.top - canvasRect.top + d.pts[i][1] * rect.height;
-          var px = px0, py = py0;
-          if (!reducido) {
-            if (apuntando) {
-              var dx = px0 + d.ox[i] - (mx - canvasRect.left);
-              var dy = py0 + d.oy[i] - (my - canvasRect.top);
-              var dist = Math.hypot(dx, dy), alcance = 24;
-              if (dist < alcance) {
-                var fuerza = (1 - dist / alcance) * 2.6;
-                d.vx[i] += (dx / (dist || 1)) * fuerza;
-                d.vy[i] += (dy / (dist || 1)) * fuerza;
-              }
-            }
-            d.vx[i] += -d.ox[i] * 0.05; d.vy[i] += -d.oy[i] * 0.05;
-            d.vx[i] *= 0.86; d.vy[i] *= 0.86;
-            d.ox[i] += d.vx[i]; d.oy[i] += d.vy[i];
-            var j = Math.sin(t * 1.6 + d.fase[i]) * 0.45 * d.amp[i];
-            var jn = Math.cos(t * 1.3 + d.fase[i] * 1.7) * 0.45 * d.amp[i];
-            px = px0 + d.ox[i] + j; py = py0 + d.oy[i] + jn;
-          }
-          ctx.globalAlpha = 0.55;
-          ctx.beginPath();
-          ctx.arc(px, py, 1.1, 0, TAU);
-          ctx.fill();
-        }
-      });
-    }
-
-    var canvasLog = crearCanvas(log, "hilo-log-c");
-    var canvasEnviar = crearCanvas(sendButton, "hilo-send-c");
-    var canvasPanel = crearCanvas(panel, "hilo-panel-c");
-    var burbujas = []; // {el, tono}
-
-    function registrarBurbuja(el, from) {
-      burbujas.push({ el: el, tono: from === "user" ? "accent" : "muted" });
-    }
+    var canvasPanel = document.createElement("canvas");
+    canvasPanel.className = "hilo-panel-c";
+    panel.appendChild(canvasPanel);
 
     // ── la tarjeta se arma con el MISMO motor que particulas-transmutacion.tsx
     // (la pieza de /servicios/landing), no una imitación en ctx.arc(): cada
@@ -817,35 +800,26 @@
       }
     }
 
+    // El lazo corre sólo mientras la nube arma: en reposo, cero cuadros.
     var corriendo = false, cuadro = null;
     function frame(ms) {
       if (!corriendo) return;
-      var t = ms / 1000;
-      var ctxLog = ajustar(canvasLog);
-      var rectLog = canvasLog.getBoundingClientRect();
-      ctxLog.clearRect(0, 0, rectLog.width, rectLog.height);
-      pintarItems(ctxLog, rectLog, burbujas, t);
-
-      var ctxEnviar = ajustar(canvasEnviar);
-      var rectEnviar = canvasEnviar.getBoundingClientRect();
-      ctxEnviar.clearRect(0, 0, rectEnviar.width, rectEnviar.height);
-      pintarItems(ctxEnviar, rectEnviar, [{ el: sendButton, tono: "accent" }], t);
-
       pintarApertura(ms);
-
+      if (!apertura) { corriendo = false; cuadro = null; return; }
       cuadro = requestAnimationFrame(frame);
     }
     function iniciar() {
-      if (corriendo) return;
+      if (corriendo || !apertura) return;
       corriendo = true;
       cuadro = requestAnimationFrame(frame);
     }
     function detener() {
       corriendo = false;
       if (cuadro) cancelAnimationFrame(cuadro);
+      cuadro = null;
     }
 
-    return { registrarBurbuja: registrarBurbuja, iniciar: iniciar, detener: detener, armar: armar };
+    return { iniciar: iniciar, detener: detener, armar: armar };
   })();
 
   // ── conversation ────────────────────────────────────────────────────────
@@ -886,25 +860,83 @@
     });
   }
 
-  function bubble(from, text) {
-    var node = document.createElement("div");
-    node.className = "hilo-msg";
-    node.setAttribute("data-from", from);
-    node.textContent = text;
-    log.appendChild(node);
+  function bajar() {
     log.scrollTop = log.scrollHeight;
-    if (from !== "system") contorno.registrarBurbuja(node, from);
-    return node;
   }
 
+  // Las direcciones que manda el agente se pueden tocar. Se arma con nodos y
+  // textContent, nunca con innerHTML: el texto viene de un modelo, y un
+  // modelo al que le hicieron decir "<img onerror>" no tiene que poder correr
+  // nada acá. Sólo http y https; la puntuación del final queda afuera.
+  var URL_RE = /https?:\/\/[^\s<>"']+/g;
+  function pintarTexto(nodo, texto) {
+    var desde = 0, m;
+    URL_RE.lastIndex = 0;
+    while ((m = URL_RE.exec(texto))) {
+      var url = m[0].replace(/[.,;:!?)»]+$/, "");
+      if (m.index > desde) nodo.appendChild(document.createTextNode(texto.slice(desde, m.index)));
+      var a = document.createElement("a");
+      a.href = url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = url;
+      nodo.appendChild(a);
+      desde = m.index + url.length;
+      URL_RE.lastIndex = desde;
+    }
+    if (desde < texto.length) nodo.appendChild(document.createTextNode(texto.slice(desde)));
+  }
+
+  // Una fila del agente lleva su avatar; si sigue a otra del agente, el
+  // avatar queda oculto y la fila se acerca: se leen como un solo turno.
+  function fila(from) {
+    var row = document.createElement("div");
+    row.className = "hilo-row";
+    row.setAttribute("data-from", from);
+    if (from === "agent") {
+      var previa = log.lastElementChild;
+      if (previa && previa.classList.contains("hilo-row") &&
+          previa.getAttribute("data-from") === "agent") {
+        row.setAttribute("data-seguido", "");
+      }
+      row.innerHTML = AVATAR;
+    }
+    return row;
+  }
+
+  function bubble(from, text) {
+    if (from === "system") {
+      var aviso = document.createElement("div");
+      aviso.className = "hilo-aviso";
+      aviso.textContent = text;
+      log.appendChild(aviso);
+      bajar();
+      return aviso;
+    }
+    var row = fila(from);
+    var node = document.createElement("div");
+    node.className = "hilo-msg";
+    if (from === "agent") pintarTexto(node, text);
+    else node.textContent = text;
+    row.appendChild(node);
+    log.appendChild(row);
+    bajar();
+    return row;
+  }
+
+  // Los tres puntos van en la fila del agente, con su avatar, en el lugar
+  // exacto donde va a aparecer la respuesta.
   function showTyping() {
     if (typing) return;
-    typing = document.createElement("div");
-    typing.className = "hilo-typing";
-    typing.innerHTML = "<i></i><i></i><i></i>";
-    typing.setAttribute("aria-label", "escribiendo");
+    typing = fila("agent");
+    var puntos = document.createElement("div");
+    puntos.className = "hilo-typing";
+    puntos.setAttribute("role", "status");
+    puntos.setAttribute("aria-label", "Escribiendo");
+    puntos.innerHTML = "<i></i><i></i><i></i>";
+    typing.appendChild(puntos);
     log.appendChild(typing);
-    log.scrollTop = log.scrollHeight;
+    bajar();
   }
 
   function hideTyping() {
@@ -1033,7 +1065,7 @@
   // ── saludo y sugerencias ────────────────────────────────────────────────
   // El saludo se dibuja apenas se abre, sin esperar al servidor. Antes iba
   // adentro del .then de la sesión y, además, preguntaba por
-  // log.childElementCount: el log ya tiene adentro el canvas del contorno, así
+  // log.childElementCount: el log tenía adentro el canvas del contorno, así
   // que esa cuenta nunca daba cero y el saludo no salía nunca.
   var saludado = false;
   var sugerencias = null;
@@ -1050,11 +1082,13 @@
     sugerencias.className = "hilo-sug";
     sugerencias.setAttribute("role", "group");
     sugerencias.setAttribute("aria-label", "Preguntas sugeridas");
-    SUGERENCIAS.forEach(function (texto) {
+    SUGERENCIAS.forEach(function (texto, i) {
       var boton = document.createElement("button");
       boton.type = "button";
       boton.className = "hilo-sug-b";
       boton.textContent = texto;
+      // Entran de a una, un poco después del saludo.
+      boton.style.animationDelay = (120 + i * 60) + "ms";
       boton.addEventListener("click", function () {
         // El botón desaparece al mandar: el foco pasa al campo, no al vacío.
         input.focus();
@@ -1063,7 +1097,7 @@
       sugerencias.appendChild(boton);
     });
     log.appendChild(sugerencias);
-    log.scrollTop = log.scrollHeight;
+    bajar();
   }
 
   function quitarSugerencias() {
@@ -1077,19 +1111,29 @@
   // se va solo si un intento siguiente sale bien.
   var avisoApertura = null;
 
+  // El punto verde dice «Responde al instante» sólo si el servidor contestó;
+  // si no se pudo abrir la sesión, pasa a gris y lo dice.
+  var estado = panel.querySelector(".hilo-estado");
+  function marcarEstado(anda) {
+    if (anda) estado.removeAttribute("data-caido");
+    else estado.setAttribute("data-caido", "");
+    estado.textContent = anda ? "Responde al instante" : "Sin conexión";
+  }
+
   function open(enfocar) {
     var yaAbierto = abierto();
     panel.setAttribute("data-open", "true");
     launcher.setAttribute("aria-expanded", "true");
     launcher.setAttribute("aria-label", "Cerrar el chat");
     // La nube de partículas sale de la campana: incrustado, la campana no está.
-    if (!yaAbierto && !incrustado) contorno.armar();
-    contorno.iniciar();
+    if (!yaAbierto && !incrustado) nube.armar();
+    nube.iniciar();
     saludar();
     if (enfocar) input.focus();
 
     ensureSession()
       .then(function () {
+        marcarEstado(true);
         if (avisoApertura) {
           avisoApertura.remove();
           avisoApertura = null;
@@ -1098,6 +1142,7 @@
         if (abierto()) startPolling();
       })
       .catch(function () {
+        marcarEstado(false);
         if (avisoApertura && avisoApertura.isConnected) return;
         avisoApertura = bubble("system", "No pudimos abrir el chat. Probá de nuevo en un momento.");
       });
@@ -1108,7 +1153,7 @@
     launcher.setAttribute("aria-expanded", "false");
     launcher.setAttribute("aria-label", "Abrir el chat");
     stopPolling();
-    contorno.detener();
+    nube.detener();
     if (devolverFoco) launcher.focus();
   }
 
@@ -1121,16 +1166,37 @@
     close(true);
   });
 
+  // Conversación nueva: se olvida la sesión (el servidor da otra, sin
+  // llamar al modelo), se vacía el historial y vuelven el saludo y las
+  // sugerencias. Una respuesta de la sesión vieja que llegue tarde no
+  // aparece: el sondeo pregunta por la sesión nueva.
+  panel.querySelector(".hilo-reset").addEventListener("click", function () {
+    stopPolling();
+    hideTyping();
+    forgetSession();
+    charlo = false;
+    try {
+      sessionStorage.removeItem(CHARLO_KEY);
+    } catch (error) {
+      /* nothing to do */
+    }
+    sugerencias = null;
+    avisoApertura = null;
+    log.textContent = "";
+    saludado = false;
+    open(true);
+  });
+
   document.addEventListener("keydown", function (event) {
     if (event.key === "Escape" && abierto() && !incrustado) close(true);
   });
 
   // Fuera de pantalla (incrustado más abajo en la página, o la pestaña en
-  // otro lado) el contorno de partículas no pinta.
+  // otro lado) la nube de la apertura no pinta.
   if ("IntersectionObserver" in window) {
     new IntersectionObserver(function (entradas) {
-      if (entradas[0].isIntersecting && abierto()) contorno.iniciar();
-      else contorno.detener();
+      if (entradas[0].isIntersecting && abierto()) nube.iniciar();
+      else nube.detener();
     }).observe(panel);
   }
 
@@ -1148,7 +1214,8 @@
       }
     }
 
-    sendButton.disabled = true;
+    enviando = true;
+    actualizarEnviar();
     bubble("user", text);
     showTyping();
 
@@ -1156,16 +1223,48 @@
     lastActivity = Date.now();
 
     sendMessage(text, true).finally(function () {
-      sendButton.disabled = false;
+      enviando = false;
+      actualizarEnviar();
       input.focus();
     });
   }
 
+  // La flecha se prende cuando hay algo escrito y no hay un envío en curso.
+  // Con el <input> de antes, el botón deshabilitado frenaba también el Enter;
+  // con el textarea el Enter lo maneja este código, así que mira lo mismo.
+  var enviando = false;
+  function actualizarEnviar() {
+    sendButton.disabled = enviando || !input.value.trim();
+  }
+
+  // La caja crece con el texto hasta ~5 renglones; después scrollea adentro.
+  function ajustarAlto() {
+    input.style.height = "auto";
+    input.style.height = Math.min(input.scrollHeight, 132) + "px";
+  }
+
+  input.addEventListener("input", function () {
+    ajustarAlto();
+    actualizarEnviar();
+  });
+
+  // Enter manda, Shift+Enter baja de renglón. isComposing: con un teclado
+  // que compone (japonés, chino, acentos en algunos sistemas) el Enter
+  // confirma la letra, no el mensaje.
+  input.addEventListener("keydown", function (event) {
+    if (event.key !== "Enter" || event.shiftKey || event.isComposing) return;
+    event.preventDefault();
+    if (sendButton.disabled) return;
+    if (form.requestSubmit) form.requestSubmit();
+    else form.dispatchEvent(new Event("submit", { cancelable: true }));
+  });
+
   form.addEventListener("submit", function (event) {
     event.preventDefault();
     var text = input.value.trim();
-    if (!text) return;
+    if (!text || enviando) return;
     input.value = "";
+    ajustarAlto();
     enviar(text);
   });
 
